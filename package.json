@@ -1,0 +1,51 @@
+{
+  "name": "@andybalham/github-package-template",
+  "version": "2.28.0905",
+  "description": "Template package for GitHub packages",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "lint": "eslint ./src --ext .ts",
+    "lint-and-fix": "eslint ./src --ext .ts --fix",
+    "build": "npm run lint && tsc",
+    "test": "mocha --require ts-node/register test/**/*.ts",
+    "test-coverage": "nyc npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andybalham/github-package-template.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andybalham/github-package-template/issues"
+  },
+  "homepage": "https://github.com/andybalham/github-package-template#readme",
+  "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.1",
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^8.2.1",
+    "@types/node": "^14.14.31",
+    "@typescript-eslint/eslint-plugin": "^4.15.2",
+    "@typescript-eslint/parser": "^4.15.2",
+    "chai": "^4.2.0",
+    "eslint": "^7.20.0",
+    "eslint-config-airbnb-typescript": "^12.3.1",
+    "eslint-config-prettier": "^8.1.0",
+    "eslint-config-standard": "^16.0.2",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-react": "^7.22.0",
+    "eslint-plugin-standard": "^5.0.0",
+    "mocha": "^8.3.0",
+    "nyc": "^15.1.0",
+    "prettier": "^2.2.1",
+    "source-map-support": "^0.5.19",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.2"
+  },
+  "dependencies": {}
+}
