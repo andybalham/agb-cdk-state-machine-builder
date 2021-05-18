@@ -1,4 +1,3 @@
-import MyClass from './MyClass';
-import Operation from './Operation';
+import StateMachineBuilder from './StateMachineBuilder';
 
-export { MyClass, Operation };
+export default StateMachineBuilder;
