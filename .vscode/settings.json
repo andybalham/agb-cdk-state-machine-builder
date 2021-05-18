@@ -9,6 +9,7 @@
     "Chainable",
     "Nextable",
     "istanbuljs",
+    "npmrc",
     "stepfunctions"
   ]
 }
