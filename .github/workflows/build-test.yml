@@ -16,10 +16,6 @@ jobs:
       - run: mv _.npmrc .npmrc
       - run: npm ci --ignore-scripts
         env:
-          NPM_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
+          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run build
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
       - run: npm run test-coverage
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
