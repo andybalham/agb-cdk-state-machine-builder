@@ -1,6 +1,6 @@
 {
-  "name": "@andybalham/agb-cdk-state-machine-builder",
-  "version": "1.0.0",
+  "name": "@andybalham/state-machine-builder",
+  "version": "1.0.1",
   "description": "A fluent builder interface for defining state machines in CDK",
   "main": "index.js",
   "types": "index.d.ts",
@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/andybalham/agb-cdk-state-machine-builder#readme",
   "devDependencies": {
-    "@andybalham/agb-cdk-state-machine-with-graph": "^1.0.0",
+    "@andybalham/state-machine-with-graph": "^1.0.0",
     "@aws-cdk/aws-lambda": "^1.98.0",
     "@aws-cdk/aws-lambda-event-sources": "^1.98.0",
     "@aws-cdk/aws-lambda-nodejs": "^1.98.0",

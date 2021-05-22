@@ -4,7 +4,7 @@
 import * as fs from 'fs';
 import path from 'path';
 import { expect } from 'chai';
-import StateMachineWithGraph from '@andybalham/agb-cdk-state-machine-with-graph';
+import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import StateMachineBuilder from '../src';
 import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import cdk = require('@aws-cdk/core');
