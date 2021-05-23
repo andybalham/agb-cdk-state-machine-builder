@@ -1,12 +1,6 @@
+# State Machine Builder
+
 A fluent builder interface for defining state machines in CDK.
-
-# Installing
-
-Using npm:
-
-```
-$ npm install @andybalham/state-machine-builder
-```
 
 # Usage
 

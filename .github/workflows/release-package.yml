@@ -12,16 +12,9 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: mv _.npmrc .npmrc
       - run: npm ci --ignore-scripts
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run build
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run test-coverage
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
   publish-gpr:
     needs: build
@@ -31,20 +24,15 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-          registry-url: https://npm.pkg.github.com/
+          registry-url: https://registry.npmjs.org/
       - run: mv _.npmrc .npmrc
       - run: npm ci --ignore-scripts
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run build
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run test-coverage
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: |
           cp ./package.json ./dist/src/package.json 
+          cp ./readme.md ./dist/src/readme.md
           cd ./dist/src
           npm publish --access=public
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

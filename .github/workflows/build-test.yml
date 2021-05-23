@@ -13,13 +13,6 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: mv _.npmrc .npmrc
       - run: npm ci --ignore-scripts
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run build
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - run: npm run test-coverage
-        env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
