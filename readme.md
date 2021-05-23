@@ -3,8 +3,9 @@ A fluent builder interface for defining state machines in CDK.
 # Installing
 
 Using npm:
+
 ```
-$ npm install @andybalham/agb-cdk-state-machine-builder
+$ npm install @andybalham/state-machine-builder
 ```
 
 # Usage
@@ -135,7 +136,7 @@ new sfn.StateMachine(stack, 'ErrorHandlingExample', {
     })
     .parallel('Parallel1', {
       branches: [
-        new StateMachineBuilder().perform(state3), 
+        new StateMachineBuilder().perform(state3),
         new StateMachineBuilder().perform(state4)],
       catches: [{ handler: catchAll.id }],
     })
