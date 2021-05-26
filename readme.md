@@ -2,6 +2,8 @@
 
 A fluent builder interface for defining state machines in CDK.
 
+[![Build & test](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml/badge.svg)](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml)
+
 # Usage
 
 State machine definitions in CDK are defined using a nested structure. Consider the following example with a sequence of four states:
