@@ -36,6 +36,25 @@ new sfn.StateMachine(stack, 'ChainExample', {
 
 IMHO, this approach reads better, is easier to maintain, plays nicer with [Prettier](https://prettier.io/), and results in more meaningful differences in pull requests.
 
+## Wait and Pass States
+
+`Wait` and `Pass` states can added to a state machine either by using the `perform` method, or by using the `pass` or `wait` methods for a little more convenience as the `scope` parameter is passed in automatically when the `build` method is called.
+
+```TypeScript
+new sfn.StateMachine(stack, 'WaitAndPassExample', {
+  definition: new StateMachineBuilder()
+
+    .wait('Wait1', {
+      time: sfn.WaitTime.duration(cdk.Duration.seconds(1)),
+    })
+
+    .pass('Pass1', {
+      comment: 'This is pass state 1',
+    })
+
+    .build(stack),
+});
+```
 ## Choice States
 
 `Choice` states are defined using references to the `id` of the target states rather than the state itself. This allows us to avoid nesting states within states when defining the branching. See the example below where a choice has three branches, two with conditions attached, along with a default branch if none of the conditions evaluate to `true`.
@@ -59,6 +78,38 @@ new sfn.StateMachine(stack, 'ChoiceExample', {
     .end()
 
     .perform(state3)
+
+    .build(stack),
+});
+```
+
+## Succeed and Fail States
+
+`Succeed` and `Fail` states are added using the `succeed` and `fail` methods, passing in an `id` and optional properties. `Succeed` and `Fail` states are always terminal states, so it is not necessary to have an `end` method call after them.
+
+```TypeScript
+new sfn.StateMachine(stack, 'SucceedAndFailExample', {
+  definition: new StateMachineBuilder()
+
+    .choice('Choice1', {
+      choices: [
+        { when: sfn.Condition.stringEquals('$.var1', 'Foo'), next: 'Succeed1' },
+        { when: sfn.Condition.stringEquals('$.var1', 'Bar'), next: 'Succeed2' },
+      ],
+      otherwise: 'Fail1',
+    })
+
+    .succeed('Succeed1', {
+      comment: 'Success 1',
+    })
+
+    .succeed('Succeed2', {
+      comment: 'Success 2',
+    })
+
+    .fail('Fail1', {
+      comment: 'Failure 1',
+    })
 
     .build(stack),
 });
