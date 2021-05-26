@@ -111,6 +111,52 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
+  it('renders wait states', async () => {
+    //
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Wait(definitionScope, 'State1', {
+          time: sfn.WaitTime.duration(cdk.Duration.seconds(1)),
+        });
+        const state2 = new sfn.Wait(definitionScope, 'State2', {
+          time: sfn.WaitTime.duration(cdk.Duration.seconds(2)),
+        });
+
+        const definition = sfn.Chain.start(state1.next(state2));
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const definition = new StateMachineBuilder()
+
+          .wait('State1', {
+            time: sfn.WaitTime.duration(cdk.Duration.seconds(1)),
+          })
+          .wait('State2', {
+            time: sfn.WaitTime.duration(cdk.Duration.seconds(2)),
+          })
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    const cdkGraph = JSON.parse(cdkStateMachine.graphJson);
+    const builderGraph = JSON.parse(builderStateMachine.graphJson);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
   it('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();
