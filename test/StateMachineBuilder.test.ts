@@ -67,7 +67,7 @@ describe('StateMachineWithGraph', () => {
 
   it('renders pass states', async () => {
     //
-    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const state1 = new sfn.Pass(definitionScope, 'State1', {
@@ -85,7 +85,7 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const definition = new StateMachineBuilder()
@@ -113,7 +113,7 @@ describe('StateMachineWithGraph', () => {
 
   it('renders wait states', async () => {
     //
-    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Wait-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const state1 = new sfn.Wait(definitionScope, 'State1', {
@@ -131,7 +131,7 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Wait-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const definition = new StateMachineBuilder()
@@ -283,7 +283,7 @@ describe('StateMachineWithGraph', () => {
 
     const builderStack = new cdk.Stack(new cdk.App(), 'BuilderStack');
 
-    const builderStateMachine = new StateMachineWithGraph(builderStack, 'MultipleChoice-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'SucceedAndFail-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const definition = new StateMachineBuilder()
