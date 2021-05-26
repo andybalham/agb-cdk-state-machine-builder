@@ -240,6 +240,96 @@ describe('StateMachineWithGraph', () => {
     expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(JSON.parse(cdkStateMachine.graphJson));
   });
 
+  it('renders succeed and fail', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'SucceedAndFail-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const succeed1 = new sfn.Succeed(definitionScope, 'Succeed1', {
+          comment: 'Success 1',
+        });
+        const succeed2 = new sfn.Succeed(definitionScope, 'Succeed2', {
+          comment: 'Success 2',
+        });
+        const fail1 = new sfn.Fail(definitionScope, 'Fail1', {
+          comment: 'Failure 1',
+        });
+        const fail2 = new sfn.Fail(definitionScope, 'Fail2', {
+          comment: 'Failure 2',
+        });
+
+        const definition = sfn.Chain.start(
+          new sfn.Choice(definitionScope, 'Choice1')
+            .when(
+              sfn.Condition.booleanEquals('$.var1', true),
+              new sfn.Choice(definitionScope, 'Choice2')
+                .when(sfn.Condition.booleanEquals('$.var2', true), succeed1)
+                .otherwise(fail1)
+            )
+            .otherwise(
+              new sfn.Choice(definitionScope, 'Choice3')
+                .when(sfn.Condition.booleanEquals('$.var3', true), succeed2)
+                .otherwise(fail2)
+            )
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack(new cdk.App(), 'BuilderStack');
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'MultipleChoice-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const definition = new StateMachineBuilder()
+
+          .choice('Choice1', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
+            otherwise: 'Choice3',
+          })
+
+          .choice('Choice2', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: 'Succeed1' }],
+            otherwise: 'Fail1',
+          })
+
+          .choice('Choice3', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'Succeed2' }],
+            otherwise: 'Fail2',
+          })
+
+          .succeed('Succeed1', {
+            comment: 'Success 1',
+          })
+
+          .succeed('Succeed2', {
+            comment: 'Success 2',
+          })
+
+          .fail('Fail1', {
+            comment: 'Failure 1',
+          })
+
+          .fail('Fail2', {
+            comment: 'Failure 2',
+          })
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(JSON.parse(cdkStateMachine.graphJson));
+  });
+
   it('renders maps', async () => {
     //
     const cdkStack = new cdk.Stack();

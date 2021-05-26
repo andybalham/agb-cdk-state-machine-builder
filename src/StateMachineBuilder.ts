@@ -46,6 +46,8 @@ enum StepType {
   Parallel = 'Parallel',
   Pass = 'Pass',
   Wait = 'Wait',
+  Succeed = 'Succeed',
+  Fail = 'Failure',
 }
 
 class PerformStep implements BuilderStep {
@@ -129,6 +131,24 @@ class WaitStep implements BuilderStep {
   type: StepType;
 }
 
+class FailStep implements BuilderStep {
+  //
+  constructor(public id: string, public props: sfn.FailProps) {
+    this.type = StepType.Fail;
+  }
+
+  type: StepType;
+}
+
+class SucceedStep implements BuilderStep {
+  //
+  constructor(public id: string, public props: sfn.SucceedProps) {
+    this.type = StepType.Succeed;
+  }
+
+  type: StepType;
+}
+
 export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
@@ -171,6 +191,16 @@ export default class StateMachineBuilder {
 
   pass(id: string, props: sfn.PassProps): StateMachineBuilder {
     this.steps.push(new PassStep(id, props));
+    return this;
+  }
+
+  succeed(id: string, props: sfn.SucceedProps): StateMachineBuilder {
+    this.steps.push(new SucceedStep(id, props));
+    return this;
+  }
+
+  fail(id: string, props: sfn.FailProps): StateMachineBuilder {
+    this.steps.push(new FailStep(id, props));
     return this;
   }
 
@@ -241,6 +271,14 @@ export default class StateMachineBuilder {
         stepState = new sfn.Wait(scope, step.id, (step as WaitStep).props);
         break;
 
+      case StepType.Fail:
+        stepState = new sfn.Fail(scope, step.id, (step as FailStep).props);
+        break;
+
+      case StepType.Succeed:
+        stepState = new sfn.Succeed(scope, step.id, (step as SucceedStep).props);
+        break;
+
       default:
         throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
     }
@@ -250,7 +288,9 @@ export default class StateMachineBuilder {
 
   private hasNextStep(stepIndex: number): boolean {
     //
-    if (this.steps[stepIndex].type === StepType.Choice) {
+    const stepType = this.steps[stepIndex].type;
+
+    if (stepType === StepType.Choice || stepType === StepType.Succeed || stepType === StepType.Fail) {
       return false;
     }
 
