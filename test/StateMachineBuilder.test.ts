@@ -65,6 +65,52 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
+  it('renders pass states', async () => {
+    //
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1', {
+          comment: 'This is state 1',
+        });
+        const state2 = new sfn.Pass(definitionScope, 'State2', {
+          comment: 'This is state 2',
+        });
+
+        const definition = sfn.Chain.start(state1.next(state2));
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const definition = new StateMachineBuilder()
+
+          .pass('State1', {
+            comment: 'This is state 1',
+          })
+          .pass('State2', {
+            comment: 'This is state 2',
+          })
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    const cdkGraph = JSON.parse(cdkStateMachine.graphJson);
+    const builderGraph = JSON.parse(builderStateMachine.graphJson);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
   it('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();

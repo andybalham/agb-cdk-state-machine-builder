@@ -44,6 +44,7 @@ enum StepType {
   End = 'End',
   Map = 'Map',
   Parallel = 'Parallel',
+  Pass = 'Pass',
 }
 
 class PerformStep implements BuilderStep {
@@ -109,6 +110,15 @@ class EndStep implements BuilderStep {
   type: StepType;
 }
 
+class PassStep implements BuilderStep {
+  //
+  constructor(public id: string, public props: sfn.PassProps) {
+    this.type = StepType.Pass;
+  }
+
+  type: StepType;
+}
+
 export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
@@ -146,6 +156,11 @@ export default class StateMachineBuilder {
 
   parallel(id: string, props: BuilderParallelProps): StateMachineBuilder {
     this.steps.push(new ParallelStep(id, props));
+    return this;
+  }
+
+  pass(id: string, props: sfn.PassProps): StateMachineBuilder {
+    this.steps.push(new PassStep(id, props));
     return this;
   }
 
@@ -201,6 +216,10 @@ export default class StateMachineBuilder {
 
       case StepType.Parallel:
         stepState = new sfn.Parallel(scope, step.id, (step as ParallelStep).props);
+        break;
+
+      case StepType.Pass:
+        stepState = new sfn.Pass(scope, step.id, (step as PassStep).props);
         break;
 
       default:
