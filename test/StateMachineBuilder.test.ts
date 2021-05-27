@@ -3,7 +3,7 @@
 /* eslint-disable no-new */
 import * as fs from 'fs';
 import path from 'path';
-import { expect } from 'chai';
+import { assert, expect } from 'chai';
 import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import StateMachineBuilder from '../src';
 import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
@@ -63,6 +63,23 @@ describe('StateMachineWithGraph', () => {
     const builderGraph = JSON.parse(builderStateMachine.graphJson);
 
     expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
+  it('validates duplicate ids', async () => {
+    //
+    assert.throws(() => {
+      new StateMachineBuilder()
+
+        .pass('State1')
+        .map('Map1', {
+          iterator: new StateMachineBuilder().pass('State1'),
+        })
+        .parallel('Parallel1', {
+          branches: [new StateMachineBuilder().pass('State2'), new StateMachineBuilder().pass('State2')],
+        })
+
+        .build(new cdk.Stack());
+    }, /(State1|State2)/);
   });
 
   it('renders pass states', async () => {

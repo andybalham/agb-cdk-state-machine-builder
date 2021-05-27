@@ -35,6 +35,7 @@ interface BuilderParallelProps extends sfn.ParallelProps {
 interface BuilderStep {
   type: StepType;
   id: string;
+  getIds(): string[];
 }
 
 enum StepType {
@@ -60,6 +61,10 @@ class PerformStep implements BuilderStep {
   type: StepType;
 
   id: string;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class TryPerformStep implements BuilderStep {
@@ -72,6 +77,10 @@ class TryPerformStep implements BuilderStep {
   type: StepType;
 
   id: string;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class ChoiceStep implements BuilderStep {
@@ -81,6 +90,10 @@ class ChoiceStep implements BuilderStep {
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class MapStep implements BuilderStep {
@@ -90,6 +103,10 @@ class MapStep implements BuilderStep {
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id, ...this.props.iterator.getStepIds()];
+  }
 }
 
 class ParallelStep implements BuilderStep {
@@ -99,6 +116,15 @@ class ParallelStep implements BuilderStep {
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    //
+    const branchIds = this.props.branches
+      .map((branch) => branch.getStepIds())
+      .reduce((previousIds, stepIds) => previousIds.concat(stepIds), []);
+
+    return [this.id, ...branchIds];
+  }
 }
 
 class EndStep implements BuilderStep {
@@ -111,15 +137,23 @@ class EndStep implements BuilderStep {
   id: string;
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class PassStep implements BuilderStep {
   //
-  constructor(public id: string, public props: sfn.PassProps) {
+  constructor(public id: string, public props?: sfn.PassProps) {
     this.type = StepType.Pass;
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class WaitStep implements BuilderStep {
@@ -129,24 +163,36 @@ class WaitStep implements BuilderStep {
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class FailStep implements BuilderStep {
   //
-  constructor(public id: string, public props: sfn.FailProps) {
+  constructor(public id: string, public props?: sfn.FailProps) {
     this.type = StepType.Fail;
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 class SucceedStep implements BuilderStep {
   //
-  constructor(public id: string, public props: sfn.SucceedProps) {
+  constructor(public id: string, public props?: sfn.SucceedProps) {
     this.type = StepType.Succeed;
   }
 
   type: StepType;
+
+  getIds(): string[] {
+    return [this.id];
+  }
 }
 
 export default class StateMachineBuilder {
@@ -157,6 +203,14 @@ export default class StateMachineBuilder {
 
   static new(): StateMachineBuilder {
     return new StateMachineBuilder();
+  }
+
+  getStepIds(): string[] {
+    //
+    const ids = this.steps
+      .map((step) => step.getIds())
+      .reduce((previousIds, stepIds) => previousIds.concat(stepIds), []);
+    return ids;
   }
 
   perform(state: INextableState): StateMachineBuilder {
@@ -189,17 +243,17 @@ export default class StateMachineBuilder {
     return this;
   }
 
-  pass(id: string, props: sfn.PassProps): StateMachineBuilder {
+  pass(id: string, props?: sfn.PassProps): StateMachineBuilder {
     this.steps.push(new PassStep(id, props));
     return this;
   }
 
-  succeed(id: string, props: sfn.SucceedProps): StateMachineBuilder {
+  succeed(id: string, props?: sfn.SucceedProps): StateMachineBuilder {
     this.steps.push(new SucceedStep(id, props));
     return this;
   }
 
-  fail(id: string, props: sfn.FailProps): StateMachineBuilder {
+  fail(id: string, props?: sfn.FailProps): StateMachineBuilder {
     this.steps.push(new FailStep(id, props));
     return this;
   }
@@ -210,7 +264,35 @@ export default class StateMachineBuilder {
   }
 
   build(scope: cdk.Construct): sfn.IChainable {
+    //
+    this.EnsureUniqueStepIds();
+
+    // this.EnsureAllStepsAreReachable();
+
+    // this.EnsureNoUnconditionalLoops();
+
     return this.getStepChain(scope, 0);
+  }
+
+  private EnsureUniqueStepIds(): void {
+    //
+    const stepIdCounts = this.getStepIds().reduce((counts, id) => {
+      if (counts.has(id)) {
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      } else {
+        counts.set(id, 1);
+      }
+      return counts;
+    }, new Map<string, number>());
+
+    const duplicateStepIds = new Array<string>();
+    stepIdCounts.forEach((count, id) => {
+      if (count > 1) duplicateStepIds.push(id);
+    });
+
+    if (duplicateStepIds.length > 0) {
+      throw new Error(`Duplicate ids: ${duplicateStepIds.join(', ')}`);
+    }
   }
 
   private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
