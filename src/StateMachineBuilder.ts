@@ -267,11 +267,101 @@ export default class StateMachineBuilder {
     //
     this.EnsureUniqueStepIds();
 
+    this.EnsureValidTargetIds();
+
     // this.EnsureAllStepsAreReachable();
 
-    // this.EnsureNoUnconditionalLoops();
-
     return this.getStepChain(scope, 0);
+  }
+
+  private EnsureValidTargetIds(): void {
+    //
+    const invalidTargetIds = this.getInvalidTargetIds();
+
+    if (invalidTargetIds.length > 0) {
+      throw new Error(`Invalid target ids: ${invalidTargetIds.join(', ')}`);
+    }
+  }
+
+  protected getInvalidTargetIds(): string[] {
+    //
+    const invalidTargetIds = new Set<string>();
+
+    const isInvalidId = (id: string): boolean => this.steps.findIndex((s) => s.id === id) === -1;
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const step of this.steps) {
+      //
+      // eslint-disable-next-line default-case
+      switch (step.type) {
+        //
+        case StepType.TryPerform:
+          {
+            const tryPerformStep = step as TryPerformStep;
+
+            // eslint-disable-next-line no-restricted-syntax
+            for (const c of tryPerformStep.props.catches) {
+              if (isInvalidId(c.handler)) {
+                invalidTargetIds.add(c.handler);
+              }
+            }
+          }
+          break;
+
+        case StepType.Map:
+          {
+            const mapStep = step as MapStep;
+
+            // eslint-disable-next-line no-restricted-syntax
+            for (const c of mapStep.props.catches ?? []) {
+              if (isInvalidId(c.handler)) {
+                invalidTargetIds.add(c.handler);
+              }
+            }
+
+            const iteratorInvalidTargetIds = mapStep.props.iterator.getInvalidTargetIds();
+            iteratorInvalidTargetIds.forEach((id) => invalidTargetIds.add(id));
+          }
+          break;
+
+        case StepType.Parallel:
+          {
+            const parallelStep = step as ParallelStep;
+
+            // eslint-disable-next-line no-restricted-syntax
+            for (const c of parallelStep.props.catches ?? []) {
+              if (isInvalidId(c.handler)) {
+                invalidTargetIds.add(c.handler);
+              }
+            }
+
+            parallelStep.props.branches.forEach((branch) => {
+              const branchInvalidTargetIds = branch.getInvalidTargetIds();
+              branchInvalidTargetIds.forEach((id) => invalidTargetIds.add(id));
+            });
+          }
+          break;
+
+        case StepType.Choice:
+          {
+            const choiceStep = step as ChoiceStep;
+
+            // eslint-disable-next-line no-restricted-syntax
+            for (const choice of choiceStep.props.choices) {
+              if (isInvalidId(choice.next)) {
+                invalidTargetIds.add(choice.next);
+              }
+            }
+
+            if (isInvalidId(choiceStep.props.otherwise)) {
+              invalidTargetIds.add(choiceStep.props.otherwise);
+            }
+          }
+          break;
+      }
+    }
+
+    return Array.from(invalidTargetIds);
   }
 
   private EnsureUniqueStepIds(): void {

@@ -65,21 +65,81 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
-  it('validates duplicate ids', async () => {
-    //
-    assert.throws(() => {
-      new StateMachineBuilder()
+  ['State1', 'State2'].forEach((id) => {
+    it(`validates duplicate id: ${id}`, async () => {
+      //
+      assert.throws(() => {
+        new StateMachineBuilder()
 
-        .pass('State1')
-        .map('Map1', {
-          iterator: new StateMachineBuilder().pass('State1'),
-        })
-        .parallel('Parallel1', {
-          branches: [new StateMachineBuilder().pass('State2'), new StateMachineBuilder().pass('State2')],
-        })
+          .pass('State1')
+          .map('Map1', {
+            iterator: new StateMachineBuilder().pass('State1'),
+          })
+          .parallel('Parallel1', {
+            branches: [new StateMachineBuilder().pass('State2'), new StateMachineBuilder().pass('State2')],
+          })
 
-        .build(new cdk.Stack());
-    }, /(State1|State2)/);
+          .build(new cdk.Stack());
+      }, new RegExp(id));
+    });
+  });
+
+  [
+    'UnknownTryPerformHandler',
+    'UnknownChoice',
+    'UnknownOtherwise',
+    'UnknownMapHandler',
+    'UnknownParallelHandler',
+    'UnknownIteratorTryPerformHandler',
+    'UnknownBranchTryPerformHandler',
+  ].forEach((id) => {
+    it.only(`validates unknown id: ${id}`, async () => {
+      //
+      const stack = new cdk.Stack();
+
+      const function1 = new sfnTasks.EvaluateExpression(stack, 'Function1', {
+        expression: '$.Var1 > 0',
+      });
+      const function2 = new sfnTasks.EvaluateExpression(stack, 'Function2', {
+        expression: '$.Var2 > 0',
+      });
+      const function3 = new sfnTasks.EvaluateExpression(stack, 'Function3', {
+        expression: '$.Var3 > 0',
+      });
+
+      assert.throws(() => {
+        new StateMachineBuilder()
+
+          .tryPerform(function1, {
+            catches: [{ handler: 'UnknownTryPerformHandler' }],
+          })
+
+          .choice('Choice1', {
+            choices: [{ when: sfn.Condition.isNull('$.var1'), next: 'UnknownChoice' }],
+            otherwise: 'UnknownOtherwise',
+          })
+
+          .map('Map1', {
+            iterator: new StateMachineBuilder().tryPerform(function2, {
+              catches: [{ handler: 'UnknownIteratorTryPerformHandler' }],
+            }),
+            catches: [{ handler: 'UnknownMapHandler' }],
+          })
+          .pass('UnknownIteratorTryPerformHandler') // This shouldn't be in the scope of the iterator
+
+          .parallel('Parallel1', {
+            branches: [
+              new StateMachineBuilder().tryPerform(function3, {
+                catches: [{ handler: 'UnknownBranchTryPerformHandler' }],
+              }),
+            ],
+            catches: [{ handler: 'UnknownParallelHandler' }],
+          })
+          .pass('UnknownBranchTryPerformHandler') // This shouldn't be in the scope of the branch
+
+          .build(stack);
+      }, id);
+    });
   });
 
   it('renders pass states', async () => {
