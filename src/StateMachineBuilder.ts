@@ -289,8 +289,7 @@ export default class StateMachineBuilder {
 
     const isInvalidId = (id: string): boolean => this.steps.findIndex((s) => s.id === id) === -1;
 
-    // eslint-disable-next-line no-restricted-syntax
-    for (const step of this.steps) {
+    this.steps.forEach((step) => {
       //
       // eslint-disable-next-line default-case
       switch (step.type) {
@@ -299,12 +298,9 @@ export default class StateMachineBuilder {
           {
             const tryPerformStep = step as TryPerformStep;
 
-            // eslint-disable-next-line no-restricted-syntax
-            for (const c of tryPerformStep.props.catches) {
-              if (isInvalidId(c.handler)) {
-                invalidTargetIds.add(c.handler);
-              }
-            }
+            tryPerformStep.props.catches
+              .filter((c) => isInvalidId(c.handler))
+              .forEach((c) => invalidTargetIds.add(c.handler));
           }
           break;
 
@@ -312,12 +308,9 @@ export default class StateMachineBuilder {
           {
             const mapStep = step as MapStep;
 
-            // eslint-disable-next-line no-restricted-syntax
-            for (const c of mapStep.props.catches ?? []) {
-              if (isInvalidId(c.handler)) {
-                invalidTargetIds.add(c.handler);
-              }
-            }
+            (mapStep.props.catches ?? [])
+              .filter((c) => isInvalidId(c.handler))
+              .forEach((c) => invalidTargetIds.add(c.handler));
 
             const iteratorInvalidTargetIds = mapStep.props.iterator.getInvalidTargetIds();
             iteratorInvalidTargetIds.forEach((id) => invalidTargetIds.add(id));
@@ -328,12 +321,9 @@ export default class StateMachineBuilder {
           {
             const parallelStep = step as ParallelStep;
 
-            // eslint-disable-next-line no-restricted-syntax
-            for (const c of parallelStep.props.catches ?? []) {
-              if (isInvalidId(c.handler)) {
-                invalidTargetIds.add(c.handler);
-              }
-            }
+            (parallelStep.props.catches ?? [])
+              .filter((c) => isInvalidId(c.handler))
+              .forEach((c) => invalidTargetIds.add(c.handler));
 
             parallelStep.props.branches.forEach((branch) => {
               const branchInvalidTargetIds = branch.getInvalidTargetIds();
@@ -346,12 +336,7 @@ export default class StateMachineBuilder {
           {
             const choiceStep = step as ChoiceStep;
 
-            // eslint-disable-next-line no-restricted-syntax
-            for (const choice of choiceStep.props.choices) {
-              if (isInvalidId(choice.next)) {
-                invalidTargetIds.add(choice.next);
-              }
-            }
+            choiceStep.props.choices.filter((c) => isInvalidId(c.next)).forEach((c) => invalidTargetIds.add(c.next));
 
             if (isInvalidId(choiceStep.props.otherwise)) {
               invalidTargetIds.add(choiceStep.props.otherwise);
@@ -359,7 +344,7 @@ export default class StateMachineBuilder {
           }
           break;
       }
-    }
+    });
 
     return Array.from(invalidTargetIds);
   }

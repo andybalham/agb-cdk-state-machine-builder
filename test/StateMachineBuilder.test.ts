@@ -93,7 +93,7 @@ describe('StateMachineWithGraph', () => {
     'UnknownIteratorTryPerformHandler',
     'UnknownBranchTryPerformHandler',
   ].forEach((id) => {
-    it.only(`validates unknown id: ${id}`, async () => {
+    it(`validates unknown id: ${id}`, async () => {
       //
       const stack = new cdk.Stack();
 
