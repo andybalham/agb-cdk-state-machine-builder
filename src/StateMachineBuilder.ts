@@ -36,6 +36,7 @@ interface BuilderStep {
   type: StepType;
   id: string;
   getIds(): string[];
+  getTargetIds(): string[];
 }
 
 enum StepType {
@@ -65,6 +66,11 @@ class PerformStep implements BuilderStep {
   getIds(): string[] {
     return [this.id];
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTargetIds(): string[] {
+    return [];
+  }
 }
 
 class TryPerformStep implements BuilderStep {
@@ -81,6 +87,10 @@ class TryPerformStep implements BuilderStep {
   getIds(): string[] {
     return [this.id];
   }
+
+  getTargetIds(): string[] {
+    return Array.from(this.props.catches.reduce((targetIds, c) => targetIds.add(c.handler), new Set<string>()));
+  }
 }
 
 class ChoiceStep implements BuilderStep {
@@ -94,6 +104,14 @@ class ChoiceStep implements BuilderStep {
   getIds(): string[] {
     return [this.id];
   }
+
+  getTargetIds(): string[] {
+    const choiceTargetIds = Array.from(
+      this.props.choices.reduce((targetIds, c) => targetIds.add(c.next), new Set<string>())
+    );
+    const targetIds = choiceTargetIds.concat([this.props.otherwise]);
+    return targetIds;
+  }
 }
 
 class MapStep implements BuilderStep {
@@ -106,6 +124,13 @@ class MapStep implements BuilderStep {
 
   getIds(): string[] {
     return [this.id, ...this.props.iterator.getStepIds()];
+  }
+
+  getTargetIds(): string[] {
+    const catchTargetIds = Array.from(
+      (this.props.catches ?? []).reduce((targetIds, c) => targetIds.add(c.handler), new Set<string>())
+    );
+    return catchTargetIds;
   }
 }
 
@@ -125,6 +150,13 @@ class ParallelStep implements BuilderStep {
 
     return [this.id, ...branchIds];
   }
+
+  getTargetIds(): string[] {
+    const catchTargetIds = Array.from(
+      (this.props.catches ?? []).reduce((targetIds, c) => targetIds.add(c.handler), new Set<string>())
+    );
+    return catchTargetIds;
+  }
 }
 
 class EndStep implements BuilderStep {
@@ -141,6 +173,11 @@ class EndStep implements BuilderStep {
   getIds(): string[] {
     return [this.id];
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTargetIds(): string[] {
+    return [];
+  }
 }
 
 class PassStep implements BuilderStep {
@@ -153,6 +190,11 @@ class PassStep implements BuilderStep {
 
   getIds(): string[] {
     return [this.id];
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTargetIds(): string[] {
+    return [];
   }
 }
 
@@ -167,6 +209,11 @@ class WaitStep implements BuilderStep {
   getIds(): string[] {
     return [this.id];
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTargetIds(): string[] {
+    return [];
+  }
 }
 
 class FailStep implements BuilderStep {
@@ -180,6 +227,11 @@ class FailStep implements BuilderStep {
   getIds(): string[] {
     return [this.id];
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTargetIds(): string[] {
+    return [];
+  }
 }
 
 class SucceedStep implements BuilderStep {
@@ -192,6 +244,11 @@ class SucceedStep implements BuilderStep {
 
   getIds(): string[] {
     return [this.id];
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTargetIds(): string[] {
+    return [];
   }
 }
 
@@ -291,57 +348,21 @@ export default class StateMachineBuilder {
 
     this.steps.forEach((step) => {
       //
+      const stepTargetIds = step.getTargetIds();
+
+      stepTargetIds.filter((id) => isInvalidId(id)).forEach((id) => invalidTargetIds.add(id));
+
       // eslint-disable-next-line default-case
       switch (step.type) {
         //
-        case StepType.TryPerform:
-          {
-            const tryPerformStep = step as TryPerformStep;
-
-            tryPerformStep.props.catches
-              .filter((c) => isInvalidId(c.handler))
-              .forEach((c) => invalidTargetIds.add(c.handler));
-          }
-          break;
-
         case StepType.Map:
-          {
-            const mapStep = step as MapStep;
-
-            (mapStep.props.catches ?? [])
-              .filter((c) => isInvalidId(c.handler))
-              .forEach((c) => invalidTargetIds.add(c.handler));
-
-            const iteratorInvalidTargetIds = mapStep.props.iterator.getInvalidTargetIds();
-            iteratorInvalidTargetIds.forEach((id) => invalidTargetIds.add(id));
-          }
+          (step as MapStep).props.iterator.getInvalidTargetIds().forEach((id) => invalidTargetIds.add(id));
           break;
 
         case StepType.Parallel:
-          {
-            const parallelStep = step as ParallelStep;
-
-            (parallelStep.props.catches ?? [])
-              .filter((c) => isInvalidId(c.handler))
-              .forEach((c) => invalidTargetIds.add(c.handler));
-
-            parallelStep.props.branches.forEach((branch) => {
-              const branchInvalidTargetIds = branch.getInvalidTargetIds();
-              branchInvalidTargetIds.forEach((id) => invalidTargetIds.add(id));
-            });
-          }
-          break;
-
-        case StepType.Choice:
-          {
-            const choiceStep = step as ChoiceStep;
-
-            choiceStep.props.choices.filter((c) => isInvalidId(c.next)).forEach((c) => invalidTargetIds.add(c.next));
-
-            if (isInvalidId(choiceStep.props.otherwise)) {
-              invalidTargetIds.add(choiceStep.props.otherwise);
-            }
-          }
+          (step as ParallelStep).props.branches.forEach((branch) =>
+            branch.getInvalidTargetIds().forEach((id) => invalidTargetIds.add(id))
+          );
           break;
       }
     });
