@@ -12,6 +12,8 @@ import sfn = require('@aws-cdk/aws-stepfunctions');
 
 describe('StateMachineWithGraph', () => {
   //
+  // TODO 29May21: Validate empty builder
+
   it('renders simple chain', async () => {
     //
     const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
@@ -80,7 +82,7 @@ describe('StateMachineWithGraph', () => {
           })
 
           .build(new cdk.Stack());
-      }, new RegExp(id));
+      }, new RegExp(`duplicate.*${id}`, 'i'));
     });
   });
 
@@ -138,9 +140,67 @@ describe('StateMachineWithGraph', () => {
           .pass('UnknownBranchTryPerformHandler') // This shouldn't be in the scope of the branch
 
           .build(stack);
-      }, id);
+      }, new RegExp(`invalid target.*${id}`, 'i'));
     });
   });
+
+  ['Unreachable1', 'Unreachable2', 'Unreachable3', 'Unreachable4', 'MapUnreachable1', 'ParallelUnreachable1'].forEach(
+    (id) => {
+      it(`validates unreachable id: ${id}`, async () => {
+        //
+        const stack = new cdk.Stack();
+
+        const function1 = new sfnTasks.EvaluateExpression(stack, 'Function1', {
+          expression: '$.Var1 > 0',
+        });
+
+        assert.throws(() => {
+          new StateMachineBuilder()
+
+            .tryPerform(function1, {
+              catches: [{ handler: 'TryPerformHandler' }],
+            })
+
+            .choice('Choice1', {
+              choices: [
+                { when: sfn.Condition.isNull('$.var1'), next: 'Map1' },
+                { when: sfn.Condition.isNull('$.var2'), next: 'Parallel1' },
+              ],
+              otherwise: 'Pass1',
+            })
+
+            .pass('Unreachable1')
+
+            .pass('Pass1')
+            .end()
+
+            .pass('Unreachable2')
+
+            .map('Map1', {
+              iterator: new StateMachineBuilder().fail('MapFail1').pass('MapUnreachable1').end(),
+              catches: [{ handler: 'MapHandler' }],
+            })
+            .succeed('Succeed1')
+
+            .pass('Unreachable3')
+
+            .parallel('Parallel1', {
+              branches: [new StateMachineBuilder().fail('ParallelFail1').pass('ParallelUnreachable1').end()],
+              catches: [{ handler: 'ParallelHandler' }],
+            })
+            .fail('Fail1')
+
+            .pass('Unreachable4')
+
+            .fail('TryPerformHandler')
+            .fail('MapHandler')
+            .fail('ParallelHandler')
+
+            .build(stack);
+        }, new RegExp(`unreachable.*${id}`, 'i'));
+      });
+    }
+  );
 
   it('renders pass states', async () => {
     //

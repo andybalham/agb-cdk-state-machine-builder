@@ -166,10 +166,14 @@ class ParallelStep extends BuilderStepBase {
 
 class EndStep extends BuilderStepBase {
   //
-  constructor(suffix: number) {
+  constructor() {
     super();
     this.type = StepType.End;
-    this.id = `End${suffix}`;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getIds(): string[] {
+    return [];
   }
 }
 
@@ -243,7 +247,7 @@ export default class StateMachineBuilder {
   }
 
   end(): StateMachineBuilder {
-    this.steps.push(new EndStep(this.steps.length));
+    this.steps.push(new EndStep());
     return this;
   }
 
@@ -283,9 +287,43 @@ export default class StateMachineBuilder {
 
     this.EnsureValidTargetIds();
 
-    // this.EnsureAllStepsAreReachable();
+    this.EnsureAllStepsAreReachable();
 
     return this.getStepChain(scope, 0);
+  }
+
+  private EnsureAllStepsAreReachable(): void {
+    //
+    const visitedSteps = new Set<string>();
+    this.visitSteps(0, visitedSteps);
+
+    const unvisitedStepIds = this.getStepIds().filter((id) => !visitedSteps.has(id));
+
+    if (unvisitedStepIds.length > 0) {
+      throw new Error(`Unreachable ids: ${unvisitedStepIds.join(', ')}`);
+    }
+  }
+
+  protected visitSteps(stepIndex: number, visitedSteps: Set<string>): void {
+    //
+    const step = this.steps[stepIndex];
+
+    if (visitedSteps.has(step.id)) {
+      return;
+    }
+
+    visitedSteps.add(step.id);
+
+    step
+      .getTargetIds()
+      .map((targetId) => this.getStepIndexById(targetId))
+      .forEach((targetIndex) => this.visitSteps(targetIndex, visitedSteps));
+
+    step.getSubBuilders().forEach((b) => b.visitSteps(0, visitedSteps));
+
+    if (this.hasNextStep(stepIndex)) {
+      this.visitSteps(stepIndex + 1, visitedSteps);
+    }
   }
 
   private EnsureValidTargetIds(): void {
