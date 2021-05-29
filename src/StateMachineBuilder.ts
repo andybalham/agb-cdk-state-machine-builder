@@ -37,6 +37,7 @@ interface BuilderStep {
   id: string;
   getIds(): string[];
   getTargetIds(): string[];
+  getSubBuilders(): StateMachineBuilder[];
 }
 
 enum StepType {
@@ -52,13 +53,8 @@ enum StepType {
   Fail = 'Failure',
 }
 
-class PerformStep implements BuilderStep {
+abstract class BuilderStepBase implements BuilderStep {
   //
-  constructor(public state: INextableState) {
-    this.type = StepType.Perform;
-    this.id = state.id;
-  }
-
   type: StepType;
 
   id: string;
@@ -71,21 +67,28 @@ class PerformStep implements BuilderStep {
   getTargetIds(): string[] {
     return [];
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  getSubBuilders(): StateMachineBuilder[] {
+    return [];
+  }
 }
 
-class TryPerformStep implements BuilderStep {
+class PerformStep extends BuilderStepBase {
   //
-  constructor(public state: sfn.TaskStateBase, public props: BuilderTryPerformProps) {
-    this.type = StepType.TryPerform;
+  constructor(public state: INextableState) {
+    super();
+    this.type = StepType.Perform;
     this.id = state.id;
   }
+}
 
-  type: StepType;
-
-  id: string;
-
-  getIds(): string[] {
-    return [this.id];
+class TryPerformStep extends BuilderStepBase {
+  //
+  constructor(public state: sfn.TaskStateBase, public props: BuilderTryPerformProps) {
+    super();
+    this.type = StepType.TryPerform;
+    this.id = state.id;
   }
 
   getTargetIds(): string[] {
@@ -93,16 +96,12 @@ class TryPerformStep implements BuilderStep {
   }
 }
 
-class ChoiceStep implements BuilderStep {
+class ChoiceStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props: BuilderChoiceProps) {
+  constructor(id: string, public props: BuilderChoiceProps) {
+    super();
+    this.id = id;
     this.type = StepType.Choice;
-  }
-
-  type: StepType;
-
-  getIds(): string[] {
-    return [this.id];
   }
 
   getTargetIds(): string[] {
@@ -114,13 +113,13 @@ class ChoiceStep implements BuilderStep {
   }
 }
 
-class MapStep implements BuilderStep {
+class MapStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props: BuilderMapProps) {
+  constructor(id: string, public props: BuilderMapProps) {
+    super();
+    this.id = id;
     this.type = StepType.Map;
   }
-
-  type: StepType;
 
   getIds(): string[] {
     return [this.id, ...this.props.iterator.getStepIds()];
@@ -132,22 +131,24 @@ class MapStep implements BuilderStep {
     );
     return catchTargetIds;
   }
+
+  getSubBuilders(): StateMachineBuilder[] {
+    return [this.props.iterator];
+  }
 }
 
-class ParallelStep implements BuilderStep {
+class ParallelStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props: BuilderParallelProps) {
+  constructor(id: string, public props: BuilderParallelProps) {
+    super();
+    this.id = id;
     this.type = StepType.Parallel;
   }
 
-  type: StepType;
-
   getIds(): string[] {
-    //
     const branchIds = this.props.branches
       .map((branch) => branch.getStepIds())
       .reduce((previousIds, stepIds) => previousIds.concat(stepIds), []);
-
     return [this.id, ...branchIds];
   }
 
@@ -157,98 +158,54 @@ class ParallelStep implements BuilderStep {
     );
     return catchTargetIds;
   }
+
+  getSubBuilders(): StateMachineBuilder[] {
+    return this.props.branches;
+  }
 }
 
-class EndStep implements BuilderStep {
+class EndStep extends BuilderStepBase {
   //
   constructor(suffix: number) {
+    super();
     this.type = StepType.End;
     this.id = `End${suffix}`;
   }
-
-  id: string;
-
-  type: StepType;
-
-  getIds(): string[] {
-    return [this.id];
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getTargetIds(): string[] {
-    return [];
-  }
 }
 
-class PassStep implements BuilderStep {
+class PassStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props?: sfn.PassProps) {
+  constructor(id: string, public props?: sfn.PassProps) {
+    super();
+    this.id = id;
     this.type = StepType.Pass;
   }
-
-  type: StepType;
-
-  getIds(): string[] {
-    return [this.id];
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getTargetIds(): string[] {
-    return [];
-  }
 }
 
-class WaitStep implements BuilderStep {
+class WaitStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props: sfn.WaitProps) {
+  constructor(id: string, public props: sfn.WaitProps) {
+    super();
+    this.id = id;
     this.type = StepType.Wait;
   }
-
-  type: StepType;
-
-  getIds(): string[] {
-    return [this.id];
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getTargetIds(): string[] {
-    return [];
-  }
 }
 
-class FailStep implements BuilderStep {
+class FailStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props?: sfn.FailProps) {
+  constructor(id: string, public props?: sfn.FailProps) {
+    super();
+    this.id = id;
     this.type = StepType.Fail;
   }
-
-  type: StepType;
-
-  getIds(): string[] {
-    return [this.id];
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getTargetIds(): string[] {
-    return [];
-  }
 }
 
-class SucceedStep implements BuilderStep {
+class SucceedStep extends BuilderStepBase {
   //
-  constructor(public id: string, public props?: sfn.SucceedProps) {
+  constructor(id: string, public props?: sfn.SucceedProps) {
+    super();
+    this.id = id;
     this.type = StepType.Succeed;
-  }
-
-  type: StepType;
-
-  getIds(): string[] {
-    return [this.id];
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getTargetIds(): string[] {
-    return [];
   }
 }
 
@@ -348,23 +305,12 @@ export default class StateMachineBuilder {
 
     this.steps.forEach((step) => {
       //
-      const stepTargetIds = step.getTargetIds();
+      step
+        .getTargetIds()
+        .filter((id) => isInvalidId(id))
+        .forEach((id) => invalidTargetIds.add(id));
 
-      stepTargetIds.filter((id) => isInvalidId(id)).forEach((id) => invalidTargetIds.add(id));
-
-      // eslint-disable-next-line default-case
-      switch (step.type) {
-        //
-        case StepType.Map:
-          (step as MapStep).props.iterator.getInvalidTargetIds().forEach((id) => invalidTargetIds.add(id));
-          break;
-
-        case StepType.Parallel:
-          (step as ParallelStep).props.branches.forEach((branch) =>
-            branch.getInvalidTargetIds().forEach((id) => invalidTargetIds.add(id))
-          );
-          break;
-      }
+      step.getSubBuilders().forEach((b) => b.getInvalidTargetIds().forEach((id) => invalidTargetIds.add(id)));
     });
 
     return Array.from(invalidTargetIds);
