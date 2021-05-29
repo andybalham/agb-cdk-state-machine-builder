@@ -12,8 +12,6 @@ import sfn = require('@aws-cdk/aws-stepfunctions');
 
 describe('StateMachineWithGraph', () => {
   //
-  // TODO 29May21: Validate empty builder
-
   it('renders simple chain', async () => {
     //
     const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
@@ -65,6 +63,13 @@ describe('StateMachineWithGraph', () => {
     const builderGraph = JSON.parse(builderStateMachine.graphJson);
 
     expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
+  it(`validates empty builder`, async () => {
+    //
+    assert.throws(() => {
+      new StateMachineBuilder().build(new cdk.Stack());
+    }, new RegExp(`no steps`, 'i'));
   });
 
   ['State1', 'State2'].forEach((id) => {

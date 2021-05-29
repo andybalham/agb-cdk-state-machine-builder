@@ -283,6 +283,8 @@ export default class StateMachineBuilder {
 
   build(scope: cdk.Construct): sfn.IChainable {
     //
+    this.EnsureNonEmpty();
+
     this.EnsureUniqueStepIds();
 
     this.EnsureValidTargetIds();
@@ -290,6 +292,12 @@ export default class StateMachineBuilder {
     this.EnsureAllStepsAreReachable();
 
     return this.getStepChain(scope, 0);
+  }
+
+  private EnsureNonEmpty(): void {
+    if (this.steps.length === 0) {
+      throw new Error(`No steps defined`);
+    }
   }
 
   private EnsureAllStepsAreReachable(): void {
