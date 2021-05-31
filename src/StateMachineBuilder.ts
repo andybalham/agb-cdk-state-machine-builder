@@ -3,6 +3,11 @@ import * as cdk from '@aws-cdk/core';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
 
+interface BuildProps {
+  defaultProps?: {
+    lambdaInvoke?: Omit<sfnTasks.LambdaInvokeProps, 'lambdaFunction'>;
+  };
+}
 interface INextableState extends sfn.State, sfn.INextable {}
 
 interface BuilderCatchProps extends sfn.CatchProps {
@@ -308,7 +313,7 @@ export default class StateMachineBuilder {
     return this;
   }
 
-  build(scope: cdk.Construct): sfn.IChainable {
+  build(scope: cdk.Construct, props?: BuildProps): sfn.IChainable {
     //
     this.EnsureNonEmpty();
 
@@ -318,7 +323,7 @@ export default class StateMachineBuilder {
 
     this.EnsureAllStepsAreReachable();
 
-    return this.getStepChain(scope, 0);
+    return this.getStepChain(scope, props ?? {}, 0);
   }
 
   private EnsureNonEmpty(): void {
@@ -410,7 +415,7 @@ export default class StateMachineBuilder {
     }
   }
 
-  private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+  private getStepChain(scope: cdk.Construct, props: BuildProps, stepIndex: number): sfn.IChainable {
     //
     const visitedStepState = this.stepStateByIndex.get(stepIndex);
 
@@ -420,21 +425,21 @@ export default class StateMachineBuilder {
 
     const step = this.steps[stepIndex];
 
-    const stepState = this.getStepState(scope, step);
+    const stepState = this.getStepState(scope, props, step);
 
     this.stepStateByIndex.set(stepIndex, stepState);
 
-    this.addSubChains(scope, step, stepState);
+    this.addSubChains(scope, props, step, stepState);
 
     const stepChain = this.hasNextStep(stepIndex)
-      ? ((stepState as unknown) as sfn.INextable).next(this.getStepChain(scope, stepIndex + 1))
+      ? ((stepState as unknown) as sfn.INextable).next(this.getStepChain(scope, props, stepIndex + 1))
       : stepState;
 
     return stepChain;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private getStepState(scope: cdk.Construct, step: BuilderStep): sfn.State {
+  private getStepState(scope: cdk.Construct, props: BuildProps, step: BuilderStep): sfn.State {
     //
     let stepState: sfn.State;
 
@@ -477,7 +482,10 @@ export default class StateMachineBuilder {
         break;
 
       case StepType.LambdaInvoke:
-        stepState = new sfnTasks.LambdaInvoke(scope, step.id, (step as LambdaInvokeStep).props);
+        {
+          const lambdaInvokeProps = { ...props?.defaultProps?.lambdaInvoke, ...(step as LambdaInvokeStep).props };
+          stepState = new sfnTasks.LambdaInvoke(scope, step.id, lambdaInvokeProps);
+        }
         break;
 
       default:
@@ -513,39 +521,46 @@ export default class StateMachineBuilder {
     return stepIndex;
   }
 
-  private addSubChains(scope: cdk.Construct, step: BuilderStep, stepState: sfn.State): void {
+  private addSubChains(scope: cdk.Construct, props: BuildProps, step: BuilderStep, stepState: sfn.State): void {
     //
     // eslint-disable-next-line default-case
     switch (step.type) {
       //
       case StepType.TryPerform:
-        this.addTaskStateBaseSubChains(scope, (step as TryPerformStep).props.catches, stepState as sfn.TaskStateBase);
+        this.addTaskStateBaseSubChains(
+          scope,
+          props,
+          (step as TryPerformStep).props.catches,
+          stepState as sfn.TaskStateBase
+        );
         break;
 
       case StepType.LambdaInvoke:
         this.addTaskStateBaseSubChains(
           scope,
+          props,
           (step as LambdaInvokeStep).props.catches ?? [],
           stepState as sfn.TaskStateBase
         );
         break;
 
       case StepType.Choice:
-        this.addChoiceSubChains(scope, step as ChoiceStep, stepState as sfn.Choice);
+        this.addChoiceSubChains(scope, props, step as ChoiceStep, stepState as sfn.Choice);
         break;
 
       case StepType.Map:
-        this.addMapSubChains(scope, step as MapStep, stepState as sfn.Map);
+        this.addMapSubChains(scope, props, step as MapStep, stepState as sfn.Map);
         break;
 
       case StepType.Parallel:
-        this.addParallelSubChains(scope, step as ParallelStep, stepState as sfn.Parallel);
+        this.addParallelSubChains(scope, props, step as ParallelStep, stepState as sfn.Parallel);
         break;
     }
   }
 
   private addTaskStateBaseSubChains(
     scope: cdk.Construct,
+    props: BuildProps,
     catches: BuilderCatchProps[],
     stepState: sfn.TaskStateBase
   ): void {
@@ -553,24 +568,24 @@ export default class StateMachineBuilder {
     catches.forEach((catchProps) => {
       //
       const handlerStepIndex = this.getStepIndexById(catchProps.handler);
-      const handlerChain = this.getStepChain(scope, handlerStepIndex);
+      const handlerChain = this.getStepChain(scope, props, handlerStepIndex);
 
       stepState.addCatch(handlerChain, catchProps);
     });
   }
 
-  private addChoiceSubChains(scope: cdk.Construct, step: ChoiceStep, stepState: sfn.Choice): void {
+  private addChoiceSubChains(scope: cdk.Construct, props: BuildProps, step: ChoiceStep, stepState: sfn.Choice): void {
     //
     step.props.choices.forEach((choice) => {
       const nextIndex = this.getStepIndexById(choice.next);
-      stepState.when(choice.when, this.getStepChain(scope, nextIndex));
+      stepState.when(choice.when, this.getStepChain(scope, props, nextIndex));
     });
 
     const otherwiseStepIndex = this.getStepIndexById(step.props.otherwise);
-    stepState.otherwise(this.getStepChain(scope, otherwiseStepIndex));
+    stepState.otherwise(this.getStepChain(scope, props, otherwiseStepIndex));
   }
 
-  private addMapSubChains(scope: cdk.Construct, step: MapStep, stepState: sfn.Map): void {
+  private addMapSubChains(scope: cdk.Construct, props: BuildProps, step: MapStep, stepState: sfn.Map): void {
     //
     stepState.iterator(step.props.iterator.build(scope));
 
@@ -578,14 +593,19 @@ export default class StateMachineBuilder {
       step.props.catches.forEach((catchProps) => {
         //
         const handlerStepIndex = this.getStepIndexById(catchProps.handler);
-        const handlerChain = this.getStepChain(scope, handlerStepIndex);
+        const handlerChain = this.getStepChain(scope, props, handlerStepIndex);
 
         stepState.addCatch(handlerChain, catchProps);
       });
     }
   }
 
-  private addParallelSubChains(scope: cdk.Construct, step: ParallelStep, stepState: sfn.Parallel): void {
+  private addParallelSubChains(
+    scope: cdk.Construct,
+    props: BuildProps,
+    step: ParallelStep,
+    stepState: sfn.Parallel
+  ): void {
     //
     step.props.branches.forEach((branch) => {
       stepState.branch(branch.build(scope));
@@ -595,7 +615,7 @@ export default class StateMachineBuilder {
       step.props.catches.forEach((catchProps) => {
         //
         const handlerStepIndex = this.getStepIndexById(catchProps.handler);
-        const handlerChain = this.getStepChain(scope, handlerStepIndex);
+        const handlerChain = this.getStepChain(scope, props, handlerStepIndex);
 
         stepState.addCatch(handlerChain, catchProps);
       });

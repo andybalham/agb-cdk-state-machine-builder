@@ -312,6 +312,74 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
+  it('renders lambda invoke with state defaults', async () => {
+    //
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const lambdaInvoke1 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke1', {
+          lambdaFunction: function1,
+          payloadResponseOnly: true,
+        });
+
+        const lambdaInvoke2 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke2', {
+          lambdaFunction: function1,
+          payloadResponseOnly: false,
+        });
+
+        const definition = sfn.Chain.start(lambdaInvoke1.next(lambdaInvoke2));
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const definition = new StateMachineBuilder()
+
+          .lambdaInvoke('LambdaInvoke1', {
+            lambdaFunction: function1,
+          })
+          .lambdaInvoke('LambdaInvoke2', {
+            lambdaFunction: function1,
+            payloadResponseOnly: false,
+          })
+
+          .build(definitionScope, {
+            defaultProps: {
+              lambdaInvoke: {
+                payloadResponseOnly: true,
+              },
+            },
+          });
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    const cdkGraph = getComparableGraph(cdkStateMachine);
+    const builderGraph = getComparableGraph(builderStateMachine);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
   it('renders wait states', async () => {
     //
     const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Wait-CDK', {
