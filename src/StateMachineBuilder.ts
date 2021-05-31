@@ -1,6 +1,7 @@
 /* eslint-disable max-classes-per-file */
 import * as cdk from '@aws-cdk/core';
-import sfn = require('@aws-cdk/aws-stepfunctions');
+import * as sfn from '@aws-cdk/aws-stepfunctions';
+import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
 
 interface INextableState extends sfn.State, sfn.INextable {}
 
@@ -32,6 +33,10 @@ interface BuilderParallelProps extends sfn.ParallelProps {
   catches?: BuilderCatchProps[];
 }
 
+interface BuilderLambdaInvokeProps extends sfnTasks.LambdaInvokeProps {
+  catches?: BuilderCatchProps[];
+}
+
 interface BuilderStep {
   type: StepType;
   id: string;
@@ -51,6 +56,7 @@ enum StepType {
   Wait = 'Wait',
   Succeed = 'Succeed',
   Fail = 'Failure',
+  LambdaInvoke = 'LambdaInvoke',
 }
 
 abstract class BuilderStepBase implements BuilderStep {
@@ -213,6 +219,22 @@ class SucceedStep extends BuilderStepBase {
   }
 }
 
+class LambdaInvokeStep extends BuilderStepBase {
+  //
+  constructor(id: string, public props: BuilderLambdaInvokeProps) {
+    super();
+    this.id = id;
+    this.type = StepType.LambdaInvoke;
+  }
+
+  getTargetIds(): string[] {
+    const catchTargetIds = Array.from(
+      (this.props.catches ?? []).reduce((targetIds, c) => targetIds.add(c.handler), new Set<string>())
+    );
+    return catchTargetIds;
+  }
+}
+
 export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
@@ -278,6 +300,11 @@ export default class StateMachineBuilder {
 
   wait(id: string, props: sfn.WaitProps): StateMachineBuilder {
     this.steps.push(new WaitStep(id, props));
+    return this;
+  }
+
+  lambdaInvoke(id: string, props: BuilderLambdaInvokeProps): StateMachineBuilder {
+    this.steps.push(new LambdaInvokeStep(id, props));
     return this;
   }
 
@@ -449,6 +476,10 @@ export default class StateMachineBuilder {
         stepState = new sfn.Succeed(scope, step.id, (step as SucceedStep).props);
         break;
 
+      case StepType.LambdaInvoke:
+        stepState = new sfnTasks.LambdaInvoke(scope, step.id, (step as LambdaInvokeStep).props);
+        break;
+
       default:
         throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
     }
@@ -488,7 +519,15 @@ export default class StateMachineBuilder {
     switch (step.type) {
       //
       case StepType.TryPerform:
-        this.addTryPerformSubChains(scope, step as TryPerformStep, stepState as sfn.TaskStateBase);
+        this.addTaskStateBaseSubChains(scope, (step as TryPerformStep).props.catches, stepState as sfn.TaskStateBase);
+        break;
+
+      case StepType.LambdaInvoke:
+        this.addTaskStateBaseSubChains(
+          scope,
+          (step as LambdaInvokeStep).props.catches ?? [],
+          stepState as sfn.TaskStateBase
+        );
         break;
 
       case StepType.Choice:
@@ -505,9 +544,13 @@ export default class StateMachineBuilder {
     }
   }
 
-  private addTryPerformSubChains(scope: cdk.Construct, step: TryPerformStep, stepState: sfn.TaskStateBase): void {
+  private addTaskStateBaseSubChains(
+    scope: cdk.Construct,
+    catches: BuilderCatchProps[],
+    stepState: sfn.TaskStateBase
+  ): void {
     //
-    step.props.catches.forEach((catchProps) => {
+    catches.forEach((catchProps) => {
       //
       const handlerStepIndex = this.getStepIndexById(catchProps.handler);
       const handlerChain = this.getStepChain(scope, handlerStepIndex);

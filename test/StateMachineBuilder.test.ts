@@ -6,9 +6,10 @@ import path from 'path';
 import { assert, expect } from 'chai';
 import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import StateMachineBuilder from '../src';
-import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
-import cdk = require('@aws-cdk/core');
-import sfn = require('@aws-cdk/aws-stepfunctions');
+import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
+import * as cdk from '@aws-cdk/core';
+import * as sfn from '@aws-cdk/aws-stepfunctions';
+import * as lambda from '@aws-cdk/aws-lambda';
 
 describe('StateMachineWithGraph', () => {
   //
@@ -249,6 +250,64 @@ describe('StateMachineWithGraph', () => {
 
     const cdkGraph = JSON.parse(cdkStateMachine.graphJson);
     const builderGraph = JSON.parse(builderStateMachine.graphJson);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
+  it('renders lambda invoke', async () => {
+    //
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const lambdaInvoke1 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke1', {
+          lambdaFunction: function1,
+        });
+
+        const fail1 = new sfn.Fail(definitionScope, 'Fail1');
+
+        const definition = sfn.Chain.start(lambdaInvoke1.addCatch(fail1));
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const definition = new StateMachineBuilder()
+
+          .lambdaInvoke('LambdaInvoke1', {
+            lambdaFunction: function1,
+            catches: [{ handler: 'Fail1' }],
+          })
+          .end()
+
+          .fail('Fail1')
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    const cdkGraph = getComparableGraph(cdkStateMachine);
+    const builderGraph = getComparableGraph(builderStateMachine);
 
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
@@ -927,7 +986,8 @@ describe('StateMachineWithGraph', () => {
   });
 });
 
-function getComparableGraph(builderStateMachine: StateMachineWithGraph): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getComparableGraph(builderStateMachine: StateMachineWithGraph): any {
   //
   const { graphJson } = builderStateMachine;
 
