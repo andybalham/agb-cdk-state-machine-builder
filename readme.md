@@ -160,9 +160,37 @@ new sfn.StateMachine(stack, 'ParallelExample', {
 }
 ```
 
+## Lambda Invoke
+
+The `lambdaInvoke` method provides a way of adding states that invoke a Lambda function as a task. As well as providing a little syntactic sugar, default `props` can be passed in to the `build` method. In the following example, default values for `retryOnServiceExceptions` and `payloadResponseOnly` are specified via the `build` method, but the `LambdaInvoke2` overrides the value for `retryOnServiceExceptions`.
+
+```TypeScript
+new sfn.StateMachine(stack, 'LambdaInvokeExample', {
+  definition: new StateMachineBuilder()
+
+    .lambdaInvoke('LambdaInvoke1', {
+      lambdaFunction: function1,
+    })
+
+    .lambdaInvoke('LambdaInvoke2', {
+      lambdaFunction: function2,
+      retryOnServiceExceptions: true,
+    })
+
+    .build(definitionScope, {
+      defaultProps: {
+        lambdaInvoke: {
+          retryOnServiceExceptions: false,
+          payloadResponseOnly: true,
+        },
+      },
+    });
+}
+```
+
 ## Error Handling
 
-Error handlers are specified by supplying an array of `catch` instances as part of the `props` passed to the and `tryPerform`, `map`, and `parallel` methods. Each `catch` instance specifies the errors that are handled and the `id` of the handling state.
+Error handlers are specified by supplying an array of `catch` instances as part of the `props` passed to the `tryPerform`, `lambdaInvoke`, `map`, and `parallel` methods. Each `catch` instance specifies the errors that are handled and the `id` of the handling state.
 
 ```TypeScript
 new sfn.StateMachine(stack, 'ErrorHandlingExample', {

@@ -256,7 +256,7 @@ describe('StateMachineWithGraph', () => {
 
   it('renders lambda invoke', async () => {
     //
-    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvoke-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
@@ -279,7 +279,7 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvoke-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
@@ -314,7 +314,7 @@ describe('StateMachineWithGraph', () => {
 
   it('renders lambda invoke with state defaults', async () => {
     //
-    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvokeWithDefaults-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
@@ -323,14 +323,21 @@ describe('StateMachineWithGraph', () => {
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
 
+        const function2 = new lambda.Function(definitionScope, 'Function2', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
         const lambdaInvoke1 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke1', {
           lambdaFunction: function1,
           payloadResponseOnly: true,
+          retryOnServiceExceptions: false,
         });
 
         const lambdaInvoke2 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke2', {
-          lambdaFunction: function1,
-          payloadResponseOnly: false,
+          lambdaFunction: function2,
+          payloadResponseOnly: true,
         });
 
         const definition = sfn.Chain.start(lambdaInvoke1.next(lambdaInvoke2));
@@ -341,10 +348,16 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'Pass-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvokeWithDefaults-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const function2 = new lambda.Function(definitionScope, 'Function2', {
           runtime: lambda.Runtime.NODEJS_12_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
@@ -355,14 +368,16 @@ describe('StateMachineWithGraph', () => {
           .lambdaInvoke('LambdaInvoke1', {
             lambdaFunction: function1,
           })
+
           .lambdaInvoke('LambdaInvoke2', {
-            lambdaFunction: function1,
-            payloadResponseOnly: false,
+            lambdaFunction: function2,
+            retryOnServiceExceptions: true,
           })
 
           .build(definitionScope, {
             defaultProps: {
               lambdaInvoke: {
+                retryOnServiceExceptions: false,
                 payloadResponseOnly: true,
               },
             },
