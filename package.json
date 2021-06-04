@@ -1,6 +1,6 @@
 {
   "name": "@andybalham/state-machine-builder",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A fluent builder interface for defining state machines in CDK",
   "main": "index.js",
   "types": "index.d.ts",

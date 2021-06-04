@@ -57,6 +57,7 @@ new sfn.StateMachine(stack, 'WaitAndPassExample', {
     .build(stack),
 });
 ```
+
 ## Choice States
 
 `Choice` states are defined using references to the `id` of the target states rather than the state itself. This allows us to avoid nesting states within states when defining the branching. See the example below where a choice has three branches, two with conditions attached, along with a default branch if none of the conditions evaluate to `true`.
@@ -78,6 +79,30 @@ new sfn.StateMachine(stack, 'ChoiceExample', {
 
     .perform(state2)
     .end()
+
+    .perform(state3)
+
+    .build(stack),
+});
+```
+
+## Next statements
+
+The `next` statement is used to explicitly define the next state in the flow. Consider the following example, where there is a choice between two states (`state1` and `state2`) followed by a common state (`state3`). The `next` statement is used after `state1` to prevent the flow from going to `state2`.
+
+```TypeScript
+new sfn.StateMachine(stack, 'ChoiceExample', {
+  definition: new StateMachineBuilder()
+
+    .choice('Choice1', {
+      choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: state1.id }],
+      otherwise: state2.id,
+    })
+
+    .perform(state1)
+    .next(state3.id)
+
+    .perform(state2)
 
     .perform(state3)
 

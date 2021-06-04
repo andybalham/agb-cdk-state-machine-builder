@@ -100,6 +100,7 @@ describe('StateMachineWithGraph', () => {
     'UnknownParallelHandler',
     'UnknownIteratorTryPerformHandler',
     'UnknownBranchTryPerformHandler',
+    'UnknownGoto',
   ].forEach((id) => {
     it(`validates unknown id: ${id}`, async () => {
       //
@@ -145,68 +146,81 @@ describe('StateMachineWithGraph', () => {
           })
           .pass('UnknownBranchTryPerformHandler') // This shouldn't be in the scope of the branch
 
+          .next('UnknownGoto')
+
           .build(stack);
       }, new RegExp(`invalid target.*${id}`, 'i'));
     });
   });
 
-  ['Unreachable1', 'Unreachable2', 'Unreachable3', 'Unreachable4', 'MapUnreachable1', 'ParallelUnreachable1'].forEach(
-    (id) => {
-      it(`validates unreachable id: ${id}`, async () => {
-        //
-        const stack = new cdk.Stack();
+  [
+    'Unreachable1',
+    'Unreachable2',
+    'Unreachable3',
+    'Unreachable4',
+    'Unreachable5',
+    'MapUnreachable1',
+    'ParallelUnreachable1',
+  ].forEach((id) => {
+    it(`validates unreachable id: ${id}`, async () => {
+      //
+      const stack = new cdk.Stack();
 
-        const function1 = new sfnTasks.EvaluateExpression(stack, 'Function1', {
-          expression: '$.Var1 > 0',
-        });
-
-        assert.throws(() => {
-          new StateMachineBuilder()
-
-            .tryPerform(function1, {
-              catches: [{ handler: 'TryPerformHandler' }],
-            })
-
-            .choice('Choice1', {
-              choices: [
-                { when: sfn.Condition.isNull('$.var1'), next: 'Map1' },
-                { when: sfn.Condition.isNull('$.var2'), next: 'Parallel1' },
-              ],
-              otherwise: 'Pass1',
-            })
-
-            .pass('Unreachable1')
-
-            .pass('Pass1')
-            .end()
-
-            .pass('Unreachable2')
-
-            .map('Map1', {
-              iterator: new StateMachineBuilder().fail('MapFail1').pass('MapUnreachable1').end(),
-              catches: [{ handler: 'MapHandler' }],
-            })
-            .succeed('Succeed1')
-
-            .pass('Unreachable3')
-
-            .parallel('Parallel1', {
-              branches: [new StateMachineBuilder().fail('ParallelFail1').pass('ParallelUnreachable1').end()],
-              catches: [{ handler: 'ParallelHandler' }],
-            })
-            .fail('Fail1')
-
-            .pass('Unreachable4')
-
-            .fail('TryPerformHandler')
-            .fail('MapHandler')
-            .fail('ParallelHandler')
-
-            .build(stack);
-        }, new RegExp(`unreachable.*${id}`, 'i'));
+      const function1 = new sfnTasks.EvaluateExpression(stack, 'Function1', {
+        expression: '$.Var1 > 0',
       });
-    }
-  );
+
+      assert.throws(() => {
+        new StateMachineBuilder()
+
+          .tryPerform(function1, {
+            catches: [{ handler: 'TryPerformHandler' }],
+          })
+
+          .choice('Choice1', {
+            choices: [
+              { when: sfn.Condition.isNull('$.var1'), next: 'Map1' },
+              { when: sfn.Condition.isNull('$.var2'), next: 'Parallel1' },
+            ],
+            otherwise: 'Pass1',
+          })
+
+          .pass('Unreachable1')
+
+          .pass('Pass1')
+          .next('Pass2')
+
+          .pass('Unreachable5')
+
+          .pass('Pass2')
+          .end()
+
+          .pass('Unreachable2')
+
+          .map('Map1', {
+            iterator: new StateMachineBuilder().fail('MapFail1').pass('MapUnreachable1').end(),
+            catches: [{ handler: 'MapHandler' }],
+          })
+          .succeed('Succeed1')
+
+          .pass('Unreachable3')
+
+          .parallel('Parallel1', {
+            branches: [new StateMachineBuilder().fail('ParallelFail1').pass('ParallelUnreachable1').end()],
+            catches: [{ handler: 'ParallelHandler' }],
+          })
+          .fail('Fail1')
+
+          .pass('Unreachable4')
+
+          .fail('TryPerformHandler')
+          .fail('MapHandler')
+          .fail('ParallelHandler')
+
+          .build(stack);
+      }, new RegExp(`unreachable.*${id}`, 'i'));
+    });
+  });
 
   it('renders pass states', async () => {
     //
@@ -512,6 +526,64 @@ describe('StateMachineWithGraph', () => {
 
           .perform(state4)
           .end()
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(JSON.parse(cdkStateMachine.graphJson));
+  });
+
+  it('renders common downstream state', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'CommonDownstreamState-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+
+        const definition = sfn.Chain.start(
+          new sfn.Choice(definitionScope, 'Choice1')
+            .when(sfn.Condition.booleanEquals('$.var1', true), state1.next(state3))
+            .otherwise(state2.next(state3))
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack(new cdk.App(), 'Builder');
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'CommonDownstreamState-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+
+        const definition = new StateMachineBuilder()
+
+          .choice('Choice1', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: state1.id }],
+            otherwise: state2.id,
+          })
+
+          .perform(state1)
+          .next(state3.id)
+
+          .perform(state2)
+          .next(state3.id)
+
+          .perform(state3)
 
           .build(definitionScope);
 
@@ -1066,6 +1138,10 @@ describe('StateMachineWithGraph', () => {
     writeGraphJson(builderStateMachine);
 
     expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(JSON.parse(cdkStateMachine.graphJson));
+  });
+
+  it.skip('validates loop with no choice', async () => {
+    // TODO 04Jun21: Validate loop with no choice
   });
 });
 

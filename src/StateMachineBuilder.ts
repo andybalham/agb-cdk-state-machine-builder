@@ -55,6 +55,7 @@ enum StepType {
   TryPerform = 'TryPerform',
   Choice = 'Choice',
   End = 'End',
+  Goto = 'Goto',
   Map = 'Map',
   Parallel = 'Parallel',
   Pass = 'Pass',
@@ -188,6 +189,23 @@ class EndStep extends BuilderStepBase {
   }
 }
 
+class GotoStep extends BuilderStepBase {
+  //
+  constructor(public targetId: string) {
+    super();
+    this.type = StepType.Goto;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getIds(): string[] {
+    return [];
+  }
+
+  getTargetIds(): string[] {
+    return [this.targetId];
+  }
+}
+
 class PassStep extends BuilderStepBase {
   //
   constructor(id: string, public props?: sfn.PassProps) {
@@ -278,6 +296,11 @@ export default class StateMachineBuilder {
     return this;
   }
 
+  next(targetId: string): StateMachineBuilder {
+    this.steps.push(new GotoStep(targetId));
+    return this;
+  }
+
   map(id: string, props: BuilderMapProps): StateMachineBuilder {
     this.steps.push(new MapStep(id, props));
     return this;
@@ -352,7 +375,9 @@ export default class StateMachineBuilder {
       return;
     }
 
-    visitedSteps.add(step.id);
+    if (step.id) {
+      visitedSteps.add(step.id);
+    }
 
     step
       .getTargetIds()
@@ -425,15 +450,25 @@ export default class StateMachineBuilder {
 
     const step = this.steps[stepIndex];
 
-    const stepState = this.getStepState(scope, props, step);
+    let stepChain: sfn.IChainable;
 
-    this.stepStateByIndex.set(stepIndex, stepState);
+    if (step.type === StepType.Goto) {
+      //
+      const gotoTargetStepIndex = this.getStepIndexById((step as GotoStep).targetId);
+      stepChain = this.getStepChain(scope, props, gotoTargetStepIndex);
+      //
+    } else {
+      //
+      const stepState = this.getStepState(scope, props, step);
 
-    this.addSubChains(scope, props, step, stepState);
+      this.stepStateByIndex.set(stepIndex, stepState);
 
-    const stepChain = this.hasNextStep(stepIndex)
-      ? ((stepState as unknown) as sfn.INextable).next(this.getStepChain(scope, props, stepIndex + 1))
-      : stepState;
+      this.addSubChains(scope, props, step, stepState);
+
+      stepChain = this.hasNextStep(stepIndex)
+        ? ((stepState as unknown) as sfn.INextable).next(this.getStepChain(scope, props, stepIndex + 1))
+        : stepState;
+    }
 
     return stepChain;
   }
@@ -499,7 +534,12 @@ export default class StateMachineBuilder {
     //
     const stepType = this.steps[stepIndex].type;
 
-    if (stepType === StepType.Choice || stepType === StepType.Succeed || stepType === StepType.Fail) {
+    if (
+      stepType === StepType.Choice ||
+      stepType === StepType.Succeed ||
+      stepType === StepType.Fail ||
+      stepType === StepType.Goto
+    ) {
       return false;
     }
 
