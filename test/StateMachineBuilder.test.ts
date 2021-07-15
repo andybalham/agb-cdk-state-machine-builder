@@ -281,6 +281,10 @@ describe('StateMachineWithGraph', () => {
 
         const lambdaInvoke1 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke1', {
           lambdaFunction: function1,
+          payload: sfn.TaskInput.fromObject({
+            constant: 'ConstantValue',
+            'dynamic.$': '$.dynamicValue',
+          }),
         });
 
         const fail1 = new sfn.Fail(definitionScope, 'Fail1');
@@ -306,6 +310,10 @@ describe('StateMachineWithGraph', () => {
 
           .lambdaInvoke('LambdaInvoke1', {
             lambdaFunction: function1,
+            parameters: {
+              constant: 'ConstantValue',
+              'dynamic.$': '$.dynamicValue',
+            },
             catches: [{ handler: 'Fail1' }],
           })
           .end()

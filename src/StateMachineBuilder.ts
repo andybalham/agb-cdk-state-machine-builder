@@ -40,6 +40,8 @@ interface BuilderParallelProps extends sfn.ParallelProps {
 
 interface BuilderLambdaInvokeProps extends sfnTasks.LambdaInvokeProps {
   catches?: BuilderCatchProps[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parameters?: Record<string, any>;
 }
 
 interface BuilderStep {
@@ -518,7 +520,14 @@ export default class StateMachineBuilder {
 
       case StepType.LambdaInvoke:
         {
-          const lambdaInvokeProps = { ...props?.defaultProps?.lambdaInvoke, ...(step as LambdaInvokeStep).props };
+          const lambdaInvokeStep = step as LambdaInvokeStep;
+          const lambdaInvokeProps = { ...props?.defaultProps?.lambdaInvoke, ...lambdaInvokeStep.props };
+
+          if (lambdaInvokeStep.props.parameters) {
+            if (lambdaInvokeProps.payload) throw new Error(`payload and parameters specified for step: ${step.id}`);
+            lambdaInvokeProps.payload = sfn.TaskInput.fromObject(lambdaInvokeStep.props.parameters);
+          }
+
           stepState = new sfnTasks.LambdaInvoke(scope, step.id, lambdaInvokeProps);
         }
         break;
