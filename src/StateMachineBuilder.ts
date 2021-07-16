@@ -636,7 +636,7 @@ export default class StateMachineBuilder {
 
   private addMapSubChains(scope: cdk.Construct, props: BuildProps, step: MapStep, stepState: sfn.Map): void {
     //
-    stepState.iterator(step.props.iterator.build(scope));
+    stepState.iterator(step.props.iterator.build(scope, props));
 
     if (step.props?.catches) {
       step.props.catches.forEach((catchProps) => {
@@ -657,7 +657,7 @@ export default class StateMachineBuilder {
   ): void {
     //
     step.props.branches.forEach((branch) => {
-      stepState.branch(branch.build(scope));
+      stepState.branch(branch.build(scope, props));
     });
 
     if (step.props?.catches) {

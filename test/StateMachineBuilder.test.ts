@@ -1148,6 +1148,103 @@ describe('StateMachineWithGraph', () => {
     expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(JSON.parse(cdkStateMachine.graphJson));
   });
 
+  it('passes build props to map and parallel', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'PassPropsToMapAndParallel-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const function2 = new lambda.Function(definitionScope, 'Function2', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const lambdaInvoke1 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke1', {
+          lambdaFunction: function1,
+          payloadResponseOnly: true,
+        });
+
+        const lambdaInvoke2 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke2', {
+          lambdaFunction: function2,
+          payloadResponseOnly: true,
+        });
+
+        const definition = sfn.Chain.start(
+          new sfn.Map(definitionScope, 'Map1', {
+            itemsPath: '$.Items1',
+          })
+            .iterator(lambdaInvoke1)
+            .next(new sfn.Parallel(definitionScope, 'Parallel1').branch(lambdaInvoke2))
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack();
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'PassPropsToMapAndParallel-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const function2 = new lambda.Function(definitionScope, 'Function2', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const definition = new StateMachineBuilder()
+
+          .map('Map1', {
+            itemsPath: '$.Items1',
+            iterator: new StateMachineBuilder().lambdaInvoke('LambdaInvoke1', {
+              lambdaFunction: function1,
+            }),
+          })
+
+          .parallel('Parallel1', {
+            branches: [
+              new StateMachineBuilder().lambdaInvoke('LambdaInvoke2', {
+                lambdaFunction: function2,
+              }),
+            ],
+          })
+
+          .build(definitionScope, {
+            defaultProps: {
+              lambdaInvoke: {
+                payloadResponseOnly: true,
+              },
+            },
+          });
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    const cdkGraph = getComparableGraph(cdkStateMachine);
+    const builderGraph = getComparableGraph(builderStateMachine);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
   it.skip('validates loop with no choice', async () => {
     // TODO 04Jun21: Validate loop with no choice
   });
