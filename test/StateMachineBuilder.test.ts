@@ -289,7 +289,9 @@ describe('StateMachineWithGraph', () => {
 
         const fail1 = new sfn.Fail(definitionScope, 'Fail1');
 
-        const definition = sfn.Chain.start(lambdaInvoke1.addCatch(fail1));
+        const definition = sfn.Chain.start(
+          lambdaInvoke1.addCatch(fail1).addRetry({ maxAttempts: 3, interval: cdk.Duration.seconds(2) })
+        );
 
         return definition;
       },
@@ -315,6 +317,7 @@ describe('StateMachineWithGraph', () => {
               'dynamic.$': '$.dynamicValue',
             },
             catches: [{ handler: 'Fail1' }],
+            retry: { maxAttempts: 3, interval: cdk.Duration.seconds(2) },
           })
           .end()
 

@@ -42,6 +42,7 @@ interface BuilderLambdaInvokeProps extends sfnTasks.LambdaInvokeProps {
   catches?: BuilderCatchProps[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parameters?: Record<string, any>;
+  retry?: sfn.RetryProps;
 }
 
 interface BuilderStep {
@@ -528,7 +529,13 @@ export default class StateMachineBuilder {
             lambdaInvokeProps.payload = sfn.TaskInput.fromObject(lambdaInvokeStep.props.parameters);
           }
 
-          stepState = new sfnTasks.LambdaInvoke(scope, step.id, lambdaInvokeProps);
+          const lambdaInvoke = new sfnTasks.LambdaInvoke(scope, step.id, lambdaInvokeProps);
+
+          if (lambdaInvokeStep.props.retry) {
+            stepState = lambdaInvoke.addRetry(lambdaInvokeStep.props.retry);
+          }
+
+          stepState = lambdaInvoke;
         }
         break;
 
