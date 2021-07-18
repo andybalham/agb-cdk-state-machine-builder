@@ -187,7 +187,7 @@ new sfn.StateMachine(stack, 'ParallelExample', {
 
 ## Lambda Invoke
 
-The `lambdaInvoke` method provides a way of adding states that invoke a Lambda function as a task. As well as providing a little syntactic sugar, default `props` can be passed in to the `build` method. In the following example, default values for `retryOnServiceExceptions` and `payloadResponseOnly` are specified via the `build` method, but the `LambdaInvoke2` overrides the value for `retryOnServiceExceptions`. The additional `parameters` property also allows a simplified way of specifying a `payload` from an object.
+The `lambdaInvoke` method provides a way of adding states that invoke a Lambda function as a task. As well as providing a little syntactic sugar, default `props` can be passed in to the `build` method. In the following example, default values for `retryOnServiceExceptions` and `payloadResponseOnly` are specified via the `build` method, but the `LambdaInvoke2` overrides the value for `retryOnServiceExceptions`. The example also shows how the `parameters` property provides a simplified way of defining an object `payload` and how the retry properties are specified.
 
 ```TypeScript
 new sfn.StateMachine(stack, 'LambdaInvokeExample', {
@@ -199,6 +199,7 @@ new sfn.StateMachine(stack, 'LambdaInvokeExample', {
         constant: 'ConstantValue',
         'dynamic.$': '$.dynamicValue',
       },
+      retry: { maxAttempts: 3 },
     })
 
     .lambdaInvoke('LambdaInvoke2', {
