@@ -27,11 +27,11 @@
   },
   "homepage": "https://github.com/andybalham/agb-cdk-state-machine-builder#readme",
   "devDependencies": {
-    "@andybalham/state-machine-with-graph": "^1.0.3",
+    "@andybalham/state-machine-with-graph": "^1.0.4",
+    "@aws-cdk/aws-lambda": "^1.0.0",
     "@aws-cdk/aws-lambda-event-sources": "^1.0.0",
     "@aws-cdk/aws-lambda-nodejs": "^1.0.0",
     "@aws-cdk/aws-logs": "^1.0.0",
-    "@aws-cdk/aws-lambda": "^1.0.0",
     "@aws-cdk/aws-stepfunctions": "^1.0.0",
     "@aws-cdk/aws-stepfunctions-tasks": "^1.0.0",
     "@aws-cdk/core": "^1.0.0",
