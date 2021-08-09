@@ -1,6 +1,6 @@
 {
   "name": "@andybalham/state-machine-builder",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "A fluent builder interface for defining state machines in CDK",
   "main": "index.js",
   "types": "index.d.ts",
@@ -28,9 +28,13 @@
   "homepage": "https://github.com/andybalham/agb-cdk-state-machine-builder#readme",
   "devDependencies": {
     "@andybalham/state-machine-with-graph": "^1.0.3",
-    "@aws-cdk/aws-lambda-event-sources": "^1.98.0",
-    "@aws-cdk/aws-lambda-nodejs": "^1.98.0",
-    "@aws-cdk/aws-logs": "^1.98.0",
+    "@aws-cdk/aws-lambda-event-sources": "^1.0.0",
+    "@aws-cdk/aws-lambda-nodejs": "^1.0.0",
+    "@aws-cdk/aws-logs": "^1.0.0",
+    "@aws-cdk/aws-lambda": "^1.0.0",
+    "@aws-cdk/aws-stepfunctions": "^1.0.0",
+    "@aws-cdk/aws-stepfunctions-tasks": "^1.0.0",
+    "@aws-cdk/core": "^1.0.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^8.2.1",
@@ -56,10 +60,10 @@
     "ts-node": "^9.1.1",
     "typescript": "^4.2.2"
   },
-  "dependencies": {
-    "@aws-cdk/aws-lambda": "^1.98.0",
-    "@aws-cdk/aws-stepfunctions": "^1.98.0",
-    "@aws-cdk/aws-stepfunctions-tasks": "^1.98.0",
-    "@aws-cdk/core": "^1.98.0"
+  "peerDependencies": {
+    "@aws-cdk/aws-lambda": "^1.0.0",
+    "@aws-cdk/aws-stepfunctions": "^1.0.0",
+    "@aws-cdk/aws-stepfunctions-tasks": "^1.0.0",
+    "@aws-cdk/core": "^1.0.0"
   }
 }
