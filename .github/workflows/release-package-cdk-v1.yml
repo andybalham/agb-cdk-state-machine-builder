@@ -1,4 +1,4 @@
-name: Release Package
+name: Release Package CDK v1
 
 on:
   release:
@@ -8,11 +8,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          ref: cdk-v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
-      - run: npm ci --ignore-scripts
+          node-version: 14
+      - run: npm ci
       - run: npm run build
       - run: npm run test-coverage
 
@@ -20,14 +22,15 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          ref: cdk-v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 14
           registry-url: https://registry.npmjs.org/
-      - run: npm ci --ignore-scripts
+      - run: npm ci
       - run: npm run build
-      - run: npm run test-coverage
       - run: |
           cp ./package.json ./dist/src/package.json 
           cp ./readme.md ./dist/src/readme.md
