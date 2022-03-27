@@ -2,7 +2,11 @@
 
 A fluent builder interface for defining state machines in CDK.
 
-[![Build & test](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml/badge.svg)](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml)
+Two versions are supported:
+
+* The CDK v1 version is [@andybalham/agb-cdk-state-machine-builder](https://www.npmjs.com/package/@andybalham/agb-cdk-state-machine-builder) [![Build & test](https://github.com/andybalham/agb-cdk-agb-cdk-state-machine-builder/actions/workflows/build-test-cdk-v1.yml/badge.svg)](https://github.com/andybalham/agb-cdk-agb-cdk-state-machine-builder/actions/workflows/build-test-cdk-v1.yml)
+* The CDK v2 version is [@andybalham/agb-cdk-state-machine-builder-v2](https://www.npmjs.com/package/@andybalham/agb-cdk-state-machine-builder-v2) [![Build & test](https://github.com/andybalham/agb-cdk-agb-cdk-state-machine-builder/actions/workflows/build-test.yml/badge.svg)](https://github.com/andybalham/agb-cdk-agb-cdk-state-machine-builder/actions/workflows/build-test.yml)
+
 
 # Usage
 
