@@ -1,7 +1,6 @@
 /* eslint-disable max-classes-per-file */
-import * as cdk from '@aws-cdk/core';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
+import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks } from 'aws-cdk-lib';
+import { Construct } from 'constructs';
 
 interface BuildProps {
   defaultProps?: {
@@ -339,7 +338,7 @@ export default class StateMachineBuilder {
     return this;
   }
 
-  build(scope: cdk.Construct, props?: BuildProps): sfn.IChainable {
+  build(scope: Construct, props?: BuildProps): sfn.IChainable {
     //
     this.EnsureNonEmpty();
 
@@ -443,7 +442,7 @@ export default class StateMachineBuilder {
     }
   }
 
-  private getStepChain(scope: cdk.Construct, props: BuildProps, stepIndex: number): sfn.IChainable {
+  private getStepChain(scope: Construct, props: BuildProps, stepIndex: number): sfn.IChainable {
     //
     const visitedStepState = this.stepStateByIndex.get(stepIndex);
 
@@ -469,7 +468,7 @@ export default class StateMachineBuilder {
       this.addSubChains(scope, props, step, stepState);
 
       stepChain = this.hasNextStep(stepIndex)
-        ? ((stepState as unknown) as sfn.INextable).next(this.getStepChain(scope, props, stepIndex + 1))
+        ? (stepState as unknown as sfn.INextable).next(this.getStepChain(scope, props, stepIndex + 1))
         : stepState;
     }
 
@@ -477,7 +476,7 @@ export default class StateMachineBuilder {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private getStepState(scope: cdk.Construct, props: BuildProps, step: BuilderStep): sfn.State {
+  private getStepState(scope: Construct, props: BuildProps, step: BuilderStep): sfn.State {
     //
     let stepState: sfn.State;
 
@@ -577,7 +576,7 @@ export default class StateMachineBuilder {
     return stepIndex;
   }
 
-  private addSubChains(scope: cdk.Construct, props: BuildProps, step: BuilderStep, stepState: sfn.State): void {
+  private addSubChains(scope: Construct, props: BuildProps, step: BuilderStep, stepState: sfn.State): void {
     //
     // eslint-disable-next-line default-case
     switch (step.type) {
@@ -615,7 +614,7 @@ export default class StateMachineBuilder {
   }
 
   private addTaskStateBaseSubChains(
-    scope: cdk.Construct,
+    scope: Construct,
     props: BuildProps,
     catches: BuilderCatchProps[],
     stepState: sfn.TaskStateBase
@@ -630,7 +629,7 @@ export default class StateMachineBuilder {
     });
   }
 
-  private addChoiceSubChains(scope: cdk.Construct, props: BuildProps, step: ChoiceStep, stepState: sfn.Choice): void {
+  private addChoiceSubChains(scope: Construct, props: BuildProps, step: ChoiceStep, stepState: sfn.Choice): void {
     //
     step.props.choices.forEach((choice) => {
       const nextIndex = this.getStepIndexById(choice.next);
@@ -641,7 +640,7 @@ export default class StateMachineBuilder {
     stepState.otherwise(this.getStepChain(scope, props, otherwiseStepIndex));
   }
 
-  private addMapSubChains(scope: cdk.Construct, props: BuildProps, step: MapStep, stepState: sfn.Map): void {
+  private addMapSubChains(scope: Construct, props: BuildProps, step: MapStep, stepState: sfn.Map): void {
     //
     stepState.iterator(step.props.iterator.build(scope, props));
 
@@ -656,12 +655,7 @@ export default class StateMachineBuilder {
     }
   }
 
-  private addParallelSubChains(
-    scope: cdk.Construct,
-    props: BuildProps,
-    step: ParallelStep,
-    stepState: sfn.Parallel
-  ): void {
+  private addParallelSubChains(scope: Construct, props: BuildProps, step: ParallelStep, stepState: sfn.Parallel): void {
     //
     step.props.branches.forEach((branch) => {
       stepState.branch(branch.build(scope, props));

@@ -4,12 +4,10 @@
 import * as fs from 'fs';
 import path from 'path';
 import { assert, expect } from 'chai';
-import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
+import StateMachineWithGraph from '@andybalham/state-machine-with-graph-v2';
 import StateMachineBuilder from '../src';
-import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
-import * as cdk from '@aws-cdk/core';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import * as lambda from '@aws-cdk/aws-lambda';
+import * as cdk from 'aws-cdk-lib';
+import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks, aws_lambda as lambda } from 'aws-cdk-lib';
 
 describe('StateMachineWithGraph', () => {
   //
