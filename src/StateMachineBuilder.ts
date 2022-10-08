@@ -1,5 +1,6 @@
 /* eslint-disable max-classes-per-file */
-import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks } from 'aws-cdk-lib';
+import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks, Duration } from 'aws-cdk-lib';
+import { IntegrationPattern, JsonPath } from 'aws-cdk-lib/aws-stepfunctions';
 import { Construct } from 'constructs';
 
 interface BuildProps {
@@ -42,6 +43,11 @@ interface BuilderLambdaInvokeProps extends sfnTasks.LambdaInvokeProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parameters?: Record<string, any>;
   retry?: sfn.RetryProps;
+}
+
+interface BuilderLambdaInvokeAsyncProps extends BuilderLambdaInvokeProps {
+  timeout: Duration;
+  taskTokenParameter?: string;
 }
 
 interface BuilderStep {
@@ -335,6 +341,26 @@ export default class StateMachineBuilder {
 
   lambdaInvoke(id: string, props: BuilderLambdaInvokeProps): StateMachineBuilder {
     this.steps.push(new LambdaInvokeStep(id, props));
+    return this;
+  }
+
+  lambdaInvokeAsync(id: string, props: BuilderLambdaInvokeAsyncProps): StateMachineBuilder {
+    if (!props.parameters) {
+      throw new Error(`parameters must be specified for lambdaInvokeAsync`);
+    }
+
+    const taskTokenParameter = props.taskTokenParameter ?? 'taskToken';
+
+    const asyncProps: BuilderLambdaInvokeAsyncProps = {
+      integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+      ...props,
+      parameters: {
+        ...props.parameters,
+        [taskTokenParameter]: JsonPath.taskToken,
+      },
+    };
+
+    this.steps.push(new LambdaInvokeStep(id, asyncProps));
     return this;
   }
 
