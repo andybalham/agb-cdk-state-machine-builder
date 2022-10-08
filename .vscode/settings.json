@@ -5,6 +5,14 @@
     "source.fixAll.eslint": true
   },
   "cSpell.language": "en-GB",
+  "workbench.colorCustomizations": {
+    "[Default Dark+]": {
+      "titleBar.activeBackground": "#850021",
+      "sideBar.background": "#540015",
+      "activityBar.background": "#850021",
+      "activityBar.activeBackground": "#b5002d"
+    }
+  },
   "cSpell.words": [
     "Chainable",
     "Nextable",

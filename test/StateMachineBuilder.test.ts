@@ -7,7 +7,13 @@ import { assert, expect } from 'chai';
 import StateMachineWithGraph from '@andybalham/state-machine-with-graph-v2';
 import StateMachineBuilder from '../src';
 import * as cdk from 'aws-cdk-lib';
-import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks, aws_lambda as lambda } from 'aws-cdk-lib';
+import {
+  aws_stepfunctions as sfn,
+  aws_stepfunctions_tasks as sfnTasks,
+  aws_lambda as lambda,
+  Duration,
+} from 'aws-cdk-lib';
+import { IntegrationPattern, JsonPath } from 'aws-cdk-lib/aws-stepfunctions';
 
 describe('StateMachineWithGraph', () => {
   //
@@ -405,6 +411,80 @@ describe('StateMachineWithGraph', () => {
               },
             },
           });
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    const cdkGraph = getComparableGraph(cdkStateMachine);
+    const builderGraph = getComparableGraph(builderStateMachine);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
+  });
+
+  it.only('renders lambda invoke async', async () => {
+    //
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvoke-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const lambdaInvoke1 = new sfnTasks.LambdaInvoke(definitionScope, 'LambdaInvoke1', {
+          lambdaFunction: function1,
+          integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+          payload: sfn.TaskInput.fromObject({
+            taskToken: JsonPath.taskToken,
+            constant: 'ConstantValue',
+            'dynamic.$': '$.dynamicValue',
+          }),
+          timeout: Duration.seconds(10),
+        });
+
+        const fail1 = new sfn.Fail(definitionScope, 'Fail1');
+
+        const definition = sfn.Chain.start(
+          lambdaInvoke1.addCatch(fail1).addRetry({ maxAttempts: 3, interval: cdk.Duration.seconds(2) })
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvoke-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new lambda.Function(definitionScope, 'Function1', {
+          runtime: lambda.Runtime.NODEJS_12_X,
+          handler: 'index.handler',
+          code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
+        });
+
+        const definition = new StateMachineBuilder()
+
+          .lambdaInvokeAsync('LambdaInvoke1', {
+            lambdaFunction: function1,
+            taskTokenParameter: 'taskToken',
+            parameters: {
+              constant: 'ConstantValue',
+              'dynamic.$': '$.dynamicValue',
+            },
+            timeout: Duration.seconds(10),
+            catches: [{ handler: 'Fail1' }],
+            retry: { maxAttempts: 3, interval: cdk.Duration.seconds(2) },
+          })
+          .end()
+
+          .fail('Fail1')
+
+          .build(definitionScope);
 
         return definition;
       },
