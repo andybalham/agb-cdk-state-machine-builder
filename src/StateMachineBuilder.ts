@@ -47,7 +47,7 @@ interface BuilderLambdaInvokeProps extends sfnTasks.LambdaInvokeProps {
 }
 
 interface BuilderLambdaInvokeWaitForTaskTokenProps
-  extends Omit<BuilderLambdaInvokeProps, 'payload' | 'invocationType' | 'payloadResponseOnly'> {
+  extends Omit<BuilderLambdaInvokeProps, 'payload' | 'integrationPattern' | 'payloadResponseOnly'> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parameters: Record<string, any>;
   timeout: Duration;
