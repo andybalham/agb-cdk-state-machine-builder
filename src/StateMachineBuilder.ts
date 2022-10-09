@@ -1,6 +1,7 @@
 /* eslint-disable max-classes-per-file */
 import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks, Duration } from 'aws-cdk-lib';
 import { IntegrationPattern, JsonPath } from 'aws-cdk-lib/aws-stepfunctions';
+import { LambdaInvokeProps } from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 
 interface BuildProps {
@@ -45,7 +46,10 @@ interface BuilderLambdaInvokeProps extends sfnTasks.LambdaInvokeProps {
   retry?: sfn.RetryProps;
 }
 
-interface BuilderLambdaInvokeAsyncProps extends BuilderLambdaInvokeProps {
+interface BuilderLambdaInvokeWaitForTaskTokenProps
+  extends Omit<BuilderLambdaInvokeProps, 'payload' | 'invocationType' | 'payloadResponseOnly'> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parameters: Record<string, any>;
   timeout: Duration;
   taskTokenParameter?: string;
 }
@@ -71,6 +75,7 @@ enum StepType {
   Succeed = 'Succeed',
   Fail = 'Failure',
   LambdaInvoke = 'LambdaInvoke',
+  LambdaInvokeWaitForTaskToken = 'LambdaInvokeWaitForTaskToken',
 }
 
 abstract class BuilderStepBase implements BuilderStep {
@@ -266,6 +271,22 @@ class LambdaInvokeStep extends BuilderStepBase {
   }
 }
 
+class LambdaInvokeWaitForTaskTokenStep extends BuilderStepBase {
+  //
+  constructor(id: string, public props: BuilderLambdaInvokeWaitForTaskTokenProps) {
+    super();
+    this.id = id;
+    this.type = StepType.LambdaInvokeWaitForTaskToken;
+  }
+
+  getTargetIds(): string[] {
+    const catchTargetIds = Array.from(
+      (this.props.catches ?? []).reduce((targetIds, c) => targetIds.add(c.handler), new Set<string>())
+    );
+    return catchTargetIds;
+  }
+}
+
 export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
@@ -344,23 +365,8 @@ export default class StateMachineBuilder {
     return this;
   }
 
-  lambdaInvokeAsync(id: string, props: BuilderLambdaInvokeAsyncProps): StateMachineBuilder {
-    if (!props.parameters) {
-      throw new Error(`parameters must be specified for lambdaInvokeAsync`);
-    }
-
-    const taskTokenParameter = props.taskTokenParameter ?? 'taskToken';
-
-    const asyncProps: BuilderLambdaInvokeAsyncProps = {
-      integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
-      ...props,
-      parameters: {
-        ...props.parameters,
-        [taskTokenParameter]: JsonPath.taskToken,
-      },
-    };
-
-    this.steps.push(new LambdaInvokeStep(id, asyncProps));
+  lambdaInvokeWaitForTaskToken(id: string, props: BuilderLambdaInvokeWaitForTaskTokenProps): StateMachineBuilder {
+    this.steps.push(new LambdaInvokeWaitForTaskTokenStep(id, props));
     return this;
   }
 
@@ -564,6 +570,33 @@ export default class StateMachineBuilder {
         }
         break;
 
+      case StepType.LambdaInvokeWaitForTaskToken:
+        {
+          const lambdaInvokeWaitForTaskTokenStep = step as LambdaInvokeWaitForTaskTokenStep;
+
+          const taskTokenParameter = lambdaInvokeWaitForTaskTokenStep.props.taskTokenParameter ?? 'taskToken';
+
+          const lambdaInvokeProps: LambdaInvokeProps = {
+            ...props?.defaultProps?.lambdaInvoke,
+            ...lambdaInvokeWaitForTaskTokenStep.props,
+            integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+            payloadResponseOnly: false,
+            payload: sfn.TaskInput.fromObject({
+              ...lambdaInvokeWaitForTaskTokenStep.props.parameters,
+              [taskTokenParameter]: JsonPath.taskToken,
+            }),
+          };
+
+          const lambdaInvokeWaitForTaskToken = new sfnTasks.LambdaInvoke(scope, step.id, lambdaInvokeProps);
+
+          if (lambdaInvokeWaitForTaskTokenStep.props.retry) {
+            stepState = lambdaInvokeWaitForTaskToken.addRetry(lambdaInvokeWaitForTaskTokenStep.props.retry);
+          }
+
+          stepState = lambdaInvokeWaitForTaskToken;
+        }
+        break;
+
       default:
         throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
     }
@@ -621,6 +654,15 @@ export default class StateMachineBuilder {
           scope,
           props,
           (step as LambdaInvokeStep).props.catches ?? [],
+          stepState as sfn.TaskStateBase
+        );
+        break;
+
+      case StepType.LambdaInvokeWaitForTaskToken:
+        this.addTaskStateBaseSubChains(
+          scope,
+          props,
+          (step as LambdaInvokeWaitForTaskTokenStep).props.catches ?? [],
           stepState as sfn.TaskStateBase
         );
         break;
