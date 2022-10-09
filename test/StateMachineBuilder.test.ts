@@ -424,9 +424,9 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
-  it.only('renders lambda invoke async', async () => {
+  it('renders lambda invoke wait for task token', async () => {
     //
-    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvoke-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvokeWaitForTaskToken-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
@@ -458,7 +458,7 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvoke-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'LambdaInvokeWaitForTaskToken-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
@@ -469,7 +469,7 @@ describe('StateMachineWithGraph', () => {
 
         const definition = new StateMachineBuilder()
 
-          .lambdaInvokeAsync('LambdaInvoke1', {
+          .lambdaInvokeWaitForTaskToken('LambdaInvoke1', {
             lambdaFunction: function1,
             taskTokenParameter: 'taskToken',
             parameters: {
@@ -484,7 +484,13 @@ describe('StateMachineWithGraph', () => {
 
           .fail('Fail1')
 
-          .build(definitionScope);
+          .build(definitionScope, {
+            defaultProps: {
+              lambdaInvoke: {
+                payloadResponseOnly: true,
+              },
+            },
+          });
 
         return definition;
       },
