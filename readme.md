@@ -222,6 +222,34 @@ new sfn.StateMachine(stack, 'LambdaInvokeExample', {
 }
 ```
 
+## Lambda Invoke Wait For Task Token
+
+The `lambdaInvokeWaitForTaskToken` method provides a way of adding states that invoke a Lambda function as a task that uses the `WAIT_FOR_TASK_TOKEN` integration pattern. It automatically sets the integration pattern, adds a task token to the payload, and ensures `payloadResponseOnly` is set to `false`.
+
+```TypeScript
+new sfn.StateMachine(stack, 'LambdaInvokeWaitForTaskTokenExample', {
+  definition: new StateMachineBuilder()
+
+    .lambdaInvokeWaitForTaskToken('LambdaInvoke1', {
+      lambdaFunction: function1,
+      taskTokenParameter: 'taskToken',
+      parameters: {
+        constant: 'ConstantValue',
+        'dynamic.$': '$.dynamicValue',
+      },
+      timeout: Duration.seconds(10),
+    })
+
+    .build(definitionScope, {
+      defaultProps: {
+        lambdaInvoke: {
+          payloadResponseOnly: true,
+        },
+      },
+    });
+}
+```
+
 ## Error Handling
 
 Error handlers are specified by supplying an array of `catch` instances as part of the `props` passed to the `tryPerform`, `lambdaInvoke`, `map`, and `parallel` methods. Each `catch` instance specifies the errors that are handled and the `id` of the handling state.
