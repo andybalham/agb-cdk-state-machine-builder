@@ -13,7 +13,7 @@ import {
   aws_lambda as lambda,
   Duration,
 } from 'aws-cdk-lib';
-import { IntegrationPattern, JsonPath } from 'aws-cdk-lib/aws-stepfunctions';
+import { IntegrationPattern, JsonPath, Timeout } from 'aws-cdk-lib/aws-stepfunctions';
 
 describe('StateMachineWithGraph', () => {
   //
@@ -278,7 +278,7 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -307,7 +307,7 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -347,13 +347,13 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
 
         const function2 = new lambda.Function(definitionScope, 'Function2', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -381,13 +381,13 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
 
         const function2 = new lambda.Function(definitionScope, 'Function2', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -430,7 +430,7 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -443,7 +443,7 @@ describe('StateMachineWithGraph', () => {
             constant: 'ConstantValue',
             'dynamic.$': '$.dynamicValue',
           }),
-          timeout: Duration.seconds(10),
+          taskTimeout: Timeout.duration(Duration.seconds(10)),
         });
 
         const fail1 = new sfn.Fail(definitionScope, 'Fail1');
@@ -462,7 +462,7 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -476,7 +476,7 @@ describe('StateMachineWithGraph', () => {
               constant: 'ConstantValue',
               'dynamic.$': '$.dynamicValue',
             },
-            timeout: Duration.seconds(10),
+            taskTimeout: Timeout.duration(Duration.seconds(10)),
             catches: [{ handler: 'Fail1' }],
             retry: { maxAttempts: 3, interval: cdk.Duration.seconds(2) },
           })
@@ -1243,13 +1243,13 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
 
         const function2 = new lambda.Function(definitionScope, 'Function2', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
@@ -1284,13 +1284,13 @@ describe('StateMachineWithGraph', () => {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const function1 = new lambda.Function(definitionScope, 'Function1', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });
 
         const function2 = new lambda.Function(definitionScope, 'Function2', {
-          runtime: lambda.Runtime.NODEJS_12_X,
+          runtime: lambda.Runtime.NODEJS_18_X,
           handler: 'index.handler',
           code: lambda.Code.fromInline('exports.handler = function(event, ctx, cb) { return cb(null, "hi"); }'),
         });

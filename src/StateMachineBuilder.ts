@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
-import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks, Duration } from 'aws-cdk-lib';
-import { IntegrationPattern, JsonPath } from 'aws-cdk-lib/aws-stepfunctions';
+import { aws_stepfunctions as sfn, aws_stepfunctions_tasks as sfnTasks } from 'aws-cdk-lib';
+import { IntegrationPattern, JsonPath, Timeout } from 'aws-cdk-lib/aws-stepfunctions';
 import { LambdaInvokeProps } from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 
@@ -50,7 +50,7 @@ interface BuilderLambdaInvokeWaitForTaskTokenProps
   extends Omit<BuilderLambdaInvokeProps, 'payload' | 'integrationPattern' | 'payloadResponseOnly'> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parameters: Record<string, any>;
-  timeout: Duration;
+  taskTimeout: Timeout;
   taskTokenParameter?: string;
 }
 

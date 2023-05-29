@@ -237,7 +237,7 @@ new sfn.StateMachine(stack, 'LambdaInvokeWaitForTaskTokenExample', {
         constant: 'ConstantValue',
         'dynamic.$': '$.dynamicValue',
       },
-      timeout: Duration.seconds(10),
+      taskTimeout: Timeout.duration(Duration.seconds(10)),
     })
 
     .build(definitionScope, {
