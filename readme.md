@@ -1,14 +1,15 @@
 # State Machine Builder
 
+## Overview
+
 A fluent builder interface for defining state machines in CDK.
 
 Two versions are supported:
 
-* The CDK v1 version is [@andybalham/agb-cdk-state-machine-builder](https://www.npmjs.com/package/@andybalham/agb-cdk-state-machine-builder) [![Build & test](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test-cdk-v1.yml/badge.svg)](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test-cdk-v1.yml)
-* The CDK v2 version is [@andybalham/agb-cdk-state-machine-builder-v2](https://www.npmjs.com/package/@andybalham/agb-cdk-state-machine-builder-v2) [![Build & test](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml/badge.svg)](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml)
+- The CDK v1 version is [@andybalham/agb-cdk-state-machine-builder](https://www.npmjs.com/package/@andybalham/agb-cdk-state-machine-builder) [![Build & test](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test-cdk-v1.yml/badge.svg)](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test-cdk-v1.yml)
+- The CDK v2 version is [@andybalham/agb-cdk-state-machine-builder-v2](https://www.npmjs.com/package/@andybalham/agb-cdk-state-machine-builder-v2) [![Build & test](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml/badge.svg)](https://github.com/andybalham/agb-cdk-state-machine-builder/actions/workflows/build-test.yml)
 
-
-# Usage
+## Usage
 
 State machine definitions in CDK are defined using a nested structure. Consider the following example with a sequence of four states:
 
